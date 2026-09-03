@@ -6,4 +6,6 @@ export * from './crypto/signature.js';
 export * from './crypto/token.js';
 export * from './crypto/request-id.js';
 export * from './xml/descriptor.js';
+export * from './xml/read.js';
+export * from './xml/write.js';
 export * from './generated/index.js';
