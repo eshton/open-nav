@@ -9,4 +9,6 @@ export * from './xml/descriptor.js';
 export * from './xml/read.js';
 export * from './xml/write.js';
 export * from './invoice/payload.js';
+export * from './money/decimal.js';
+export * from './money/summary.js';
 export * from './generated/index.js';

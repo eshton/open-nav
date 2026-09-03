@@ -29,7 +29,11 @@ because of four independent things, each of which reliably costs a day:
    _technical_ and _business_ validation messages.
 4. **The arithmetic.** Line amounts must reconcile with the VAT-rate summary
    and the invoice totals, every amount on a foreign-currency invoice needs
-   its forint twin, and being one forint out means the whole batch is rejected.
+   its forint twin, and being one forint out means the whole batch is
+   rejected. The rules are not plain summation either: when a line omits its
+   VAT amount, the figure has to be derived from the rate, and a VAT
+   exemption is identified by its legal case and not by the free text beside
+   it. Six of NAV's own thirty sample invoices get their totals wrong.
 
 A library should absorb all four. That is the entire premise of this project.
 
