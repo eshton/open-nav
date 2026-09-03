@@ -65,16 +65,18 @@ A library should absorb all four. That is the entire premise of this project.
 
 ## Layout
 
-| Path            | What it is                                                    |
-| --------------- | ------------------------------------------------------------- |
-| `packages/core` | Types, crypto, XML, invoice model, validation                 |
-| `schemas/`      | Official NAV XSDs and message catalogues, vendored verbatim   |
-| `conformance/`  | NAV's own 41 sample documents, used as the golden test corpus |
-| `scripts/`      | Schema vendoring and drift detection                          |
-| `docs/`         | Guides                                                        |
+| Path               | What it is                                                          |
+| ------------------ | ------------------------------------------------------------------- |
+| `packages/core`    | Types, crypto, XML, payload encoding, exact decimals, summary rules |
+| `packages/client`  | Client for all ten service operations, plus transaction polling     |
+| `packages/codegen` | Generates the types and schema metadata from the XSDs               |
+| `schemas/`         | Official NAV XSDs and message catalogues, vendored verbatim         |
+| `conformance/`     | NAV's own 41 sample documents, used as the golden test corpus       |
+| `scripts/`         | Schema vendoring and drift detection                                |
 
-Further packages (`cli`, `mock-server`, validation, invoice document
-generation) are landing incrementally; they are not stubbed out in advance.
+Further packages — a CLI, a local mock of the invoice service, schema-level
+validation and invoice document generation — are landing incrementally. They
+are not stubbed out in advance.
 
 ## Approach
 
@@ -93,12 +95,15 @@ a round trip through this library would have been rejected by NAV.
 
 Being explicit, because it matters for anyone considering this in production:
 
-| Area                           | State                                                                                      |
-| ------------------------------ | ------------------------------------------------------------------------------------------ |
-| Cryptographic primitives       | Implemented; digests checked against published test vectors                                |
-| Request signature construction | Implemented from the 3.0 specification, **not yet confirmed against the live test system** |
-| Schema round trip              | In progress                                                                                |
-| Live NAV test system           | **Not yet exercised** — no technical user credentials                                      |
+| Area                           | State                                                                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| Cryptographic primitives       | Verified against published SHA-512 and SHA3-512 vectors                                                                  |
+| Request signature construction | Verified against all 11 of NAV's official request samples, including the three-invoice batch                             |
+| Schema round trip              | Verified against all 41 official NAV sample documents                                                                    |
+| Summary reconciliation         | Reproduces the summaries of 24 of NAV's 30 sample invoices; the other 6 are wrong upstream (see `conformance/README.md`) |
+| Client request building        | Verified by recomputing each signature from the request actually sent                                                    |
+| Exchange token decryption      | Round-trip tested for padded and unpadded tokens; no official vector exists                                              |
+| Live NAV test system           | **Not yet exercised** — no technical user credentials                                                                    |
 
 ## Requirements
 
