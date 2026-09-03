@@ -10,15 +10,17 @@
   },
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "build": "tsc -b packages/core",
+    "build": "tsc -b packages/codegen packages/core",
     "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo",
-    "typecheck": "tsc -b --force packages/core",
+    "typecheck": "tsc -b --force packages/codegen packages/core",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify": "pnpm format:check && pnpm typecheck && pnpm test"
+    "verify": "pnpm format:check && pnpm typecheck && pnpm test",
+    "codegen": "tsc -b packages/codegen && node packages/codegen/dist/main.js && prettier --write --log-level warn packages/core/src/generated",
+    "codegen:check": "pnpm codegen && git diff --exit-code -- packages/core/src/generated"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

@@ -11,13 +11,26 @@ upstream too, and the fix belongs in an issue against NAV's repository.
 | `OSA/3.0/invoiceBase.xsd` | `http://schemas.nav.gov.hu/OSA/3.0/base` | Online-Invoice |
 | `OSA/3.0/invoiceAnnulment.xsd` | `http://schemas.nav.gov.hu/OSA/3.0/annul` | Online-Invoice |
 | `OSA/3.0/serviceMetrics.xsd` | `http://schemas.nav.gov.hu/OSA/3.0/metrics` | Online-Invoice |
-| `NTCA/1.0/common.xsd` | `http://schemas.nav.gov.hu/NTCA/1.0/common` | [Common](https://github.com/nav-gov-hu/Common) @ `Common-1.0.RC3` |
+| `NTCA/1.0/common.xsd` | `http://schemas.nav.gov.hu/NTCA/1.0/common` | [Common](https://github.com/nav-gov-hu/Common) @ `common-1.0.0` |
 | `i18n/validations_*.properties` | — | Online-Invoice (NAV validation error catalogue) |
 
-`OSA/3.0/catalog.xml` is NAV's own XML catalog. It is the reason `common.xsd`
-is pinned to the `Common-1.0.RC3` tag rather than the `Common` repository's
-default branch: that branch has since moved on to NTCA **2.0**, which Online
-Számla 3.0 does not use.
+## A note on which `common.xsd` to use
+
+`OSA/3.0/catalog.xml` is NAV's own XML catalog, and it points `common.xsd` at
+the `Common-1.0.RC3` tag. **That reference is stale**: RC3 predates
+`RequestPageType` and `ResponsePageType`, which `invoiceApi.xsd` 3.0
+references for its paged queries. Resolve the 3.0 API schema against RC3 and
+those two types dangle.
+
+We therefore pin `common-1.0.0`, the final NTCA 1.0 release, which defines
+them. Two further traps if you go looking yourself:
+
+* The `Common` default branch has moved on to NTCA **2.0**, which Online
+  Számla 3.0 does not use.
+* `Common-1.0.RC6` still has a file at the old
+  `src/schemas/nav/gov/hu/NTCA/common.xsd` path, but it is **empty** — the
+  schema moved to `schemas/src/main/resources/xsd/...` during a repository
+  restructure. Reading the old path at that tag yields nothing, silently.
 
 ## Provenance
 

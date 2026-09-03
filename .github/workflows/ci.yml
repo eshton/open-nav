@@ -35,4 +35,8 @@ jobs:
 
       - run: pnpm typecheck
 
+      # The generated types and descriptors are committed so that consumers
+      # never need to run the generator. Verify they still match the XSDs.
+      - run: pnpm codegen:check
+
       - run: pnpm test

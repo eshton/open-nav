@@ -28,9 +28,14 @@ import unicodedata
 
 OSA_REPO = 'https://github.com/nav-gov-hu/Online-Invoice'
 COMMON_REPO = 'https://github.com/nav-gov-hu/Common'
-# The OSA 3.0 catalog.xml pins the NTCA common schema to this revision.
-COMMON_REVISION = 'Common-1.0.RC3'
-COMMON_XSD_PATH = 'src/schemas/nav/gov/hu/NTCA/common.xsd'
+# NTCA 1.0 final. Note that NAV's own OSA 3.0 catalog.xml points at the older
+# Common-1.0.RC3 tag, which predates RequestPageType/ResponsePageType — types
+# that invoiceApi.xsd 3.0 references. RC3 therefore cannot resolve the 3.0 API
+# schema; common-1.0.0 can. See schemas/README.md.
+COMMON_REVISION = 'common-1.0.0'
+COMMON_XSD_PATH = (
+    'schemas/src/main/resources/xsd/hu/gov/nav/schemas/NTCA/1.0/common/common.xsd'
+)
 
 SCHEMA_FILES = [
     'invoiceApi.xsd',

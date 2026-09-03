@@ -1,5 +1,5 @@
 {
-  "generated_by": "scripts/vendor-schemas.sh",
+  "generated_by": "scripts/vendor_schemas.py",
   "note": "Vendored verbatim from the official NAV repositories. Do not edit by hand.",
   "sources": [
     {
@@ -286,13 +286,13 @@
     },
     {
       "repo": "https://github.com/nav-gov-hu/Common",
-      "revision": "Common-1.0.RC3",
+      "revision": "common-1.0.0",
       "licence": "MIT (c) Nemzeti Ado- es Vamhivatal",
       "files": [
         {
-          "source_path": "src/schemas/nav/gov/hu/NTCA/common.xsd",
+          "source_path": "schemas/src/main/resources/xsd/hu/gov/nav/schemas/NTCA/1.0/common/common.xsd",
           "vendored_path": "schemas/NTCA/1.0/common.xsd",
-          "sha256": "9b323063773718c0bbd9ce3cb22e30e6fac409fb3b6327e39d59e7aab9759541"
+          "sha256": "0ad7a99292d9b5c967d0cf1f37ceafd9945ac456b534963c7c72a6e7bb42971c"
         }
       ]
     }
