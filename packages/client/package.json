@@ -1,0 +1,38 @@
+{
+  "name": "@open-nav/client",
+  "version": "0.1.0",
+  "description": "API client for the Hungarian Tax Authority (NAV) Online Számla 3.0 invoice service",
+  "keywords": [
+    "nav",
+    "onlineszamla",
+    "online-szamla",
+    "hungary",
+    "invoice",
+    "einvoice",
+    "tax",
+    "api"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@open-nav/core": "workspace:^"
+  }
+}

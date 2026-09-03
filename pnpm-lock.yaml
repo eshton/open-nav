@@ -21,6 +21,12 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)
 
+  packages/client:
+    dependencies:
+      '@open-nav/core':
+        specifier: workspace:^
+        version: link:../core
+
   packages/codegen:
     dependencies:
       fast-xml-parser:

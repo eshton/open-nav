@@ -69,7 +69,7 @@ A library should absorb all four. That is the entire premise of this project.
 | `scripts/`      | Schema vendoring and drift detection                          |
 | `docs/`         | Guides                                                        |
 
-Further packages (`client`, `cli`, `mock-server`, invoice document
+Further packages (`cli`, `mock-server`, validation, invoice document
 generation) are landing incrementally; they are not stubbed out in advance.
 
 ## Approach
@@ -102,8 +102,48 @@ Node.js 20.10 or newer, and pnpm 10.
 
 ```sh
 pnpm install
-pnpm verify   # format check, typecheck, tests
+pnpm verify    # format check, typecheck, tests
+pnpm codegen   # regenerate types from the XSDs
 ```
+
+## Usage sketch
+
+The client takes each generated request type minus the header, user and
+software blocks, which it builds and signs itself. There is no
+hand-maintained parameter list to fall out of step with the schema.
+
+```ts
+import { NavClient, waitForTransaction } from '@open-nav/client';
+
+const client = new NavClient({
+  environment: 'test',
+  credentials: {
+    login: process.env.NAV_LOGIN!,
+    password: process.env.NAV_PASSWORD!,
+    signKey: process.env.NAV_SIGN_KEY!,
+    exchangeKey: process.env.NAV_EXCHANGE_KEY!,
+    taxNumber: '12345678', // the 8 digit core, not the 11 digit number
+  },
+  software: {
+    softwareId: 'MYCOMPANY0000001',
+    softwareName: 'my invoicing app',
+    softwareOperation: 'LOCAL_SOFTWARE',
+    softwareMainVersion: '1.0.0',
+    softwareDevName: 'My Company',
+    softwareDevContact: 'dev@example.com',
+  },
+});
+
+const { transactionId } = await client.submitInvoices([{ operation: 'CREATE', invoice }]);
+
+const outcome = await waitForTransaction(client, transactionId);
+console.log(outcome.accepted.length, 'stored;', outcome.rejected.length, 'rejected');
+```
+
+Note what `submitInvoices` does for you: it exchanges a token, encodes each
+invoice **once** and both sends and hashes that same base64 (hashing a
+separately serialised copy is a signature failure waiting to happen), and
+never retries a submission that reached NAV.
 
 ## Contributing
 
