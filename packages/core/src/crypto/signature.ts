@@ -54,7 +54,5 @@ export function requestSignature(
     .map((op) => operationHash(op.operation, op.base64Payload))
     .join('');
 
-  return sha3_512(
-    `${requestId}${toSignatureTimestamp(timestamp)}${signKey}${operationDigests}`,
-  );
+  return sha3_512(`${requestId}${toSignatureTimestamp(timestamp)}${signKey}${operationDigests}`);
 }

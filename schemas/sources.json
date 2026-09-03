@@ -1,0 +1,300 @@
+{
+  "generated_by": "scripts/vendor-schemas.sh",
+  "note": "Vendored verbatim from the official NAV repositories. Do not edit by hand.",
+  "sources": [
+    {
+      "repo": "https://github.com/nav-gov-hu/Online-Invoice",
+      "revision": "cc7a775d6dce361311e409abb9934eb755f2749c",
+      "licence": "MIT (c) Nemzeti Ado- es Vamhivatal",
+      "files": [
+        {
+          "source_path": "src/schemas/nav/gov/hu/OSA/invoiceApi.xsd",
+          "vendored_path": "schemas/OSA/3.0/invoiceApi.xsd",
+          "sha256": "268c923298fea89832699c509d57fbe3b28d1b2956322294cffc9840dd78e656"
+        },
+        {
+          "source_path": "src/schemas/nav/gov/hu/OSA/invoiceData.xsd",
+          "vendored_path": "schemas/OSA/3.0/invoiceData.xsd",
+          "sha256": "e9053b21904c406adb8fce87cb83361f888247e6cd6409eac4aa651de7a86c1d"
+        },
+        {
+          "source_path": "src/schemas/nav/gov/hu/OSA/invoiceBase.xsd",
+          "vendored_path": "schemas/OSA/3.0/invoiceBase.xsd",
+          "sha256": "49362a6ede64afcfeba1c5c3726f6216e3a8cd1dbad0c071b85811759ad4acc9"
+        },
+        {
+          "source_path": "src/schemas/nav/gov/hu/OSA/invoiceAnnulment.xsd",
+          "vendored_path": "schemas/OSA/3.0/invoiceAnnulment.xsd",
+          "sha256": "b46b10041026a5f552982c5a2bdf864974147defa2dceee1ff3d5fdf8cdd2289"
+        },
+        {
+          "source_path": "src/schemas/nav/gov/hu/OSA/serviceMetrics.xsd",
+          "vendored_path": "schemas/OSA/3.0/serviceMetrics.xsd",
+          "sha256": "68a4ed2f736a871346eda61766bdcc06cc70e906b32142731499d4f201bfd2d8"
+        },
+        {
+          "source_path": "src/schemas/nav/gov/hu/OSA/catalog.xml",
+          "vendored_path": "schemas/OSA/3.0/catalog.xml",
+          "sha256": "4e42a14ad00fbe1be2f43d69398f7a0108a41001e44c713f583ea52c5bf74d27"
+        },
+        {
+          "source_path": "src/schemas/nav/gov/hu/OSA/CHANGELOG_3.0.md",
+          "vendored_path": "schemas/OSA/3.0/CHANGELOG_3.0.md",
+          "sha256": "b4c65ddbf426e5deff7f1e6612ef09dbce20f9b1c1b511cc0f5fa9d86a6796f1"
+        },
+        {
+          "source_path": "src/schemas/nav/gov/hu/OSA/CHANGELOG_2.0.md",
+          "vendored_path": "schemas/OSA/3.0/CHANGELOG_2.0.md",
+          "sha256": "c769648496241065b90875aaccc3dd64a3c08636cff3b1f608d8e3967a76521f"
+        },
+        {
+          "source_path": "src/i18n/validations_hu_public.properties",
+          "vendored_path": "schemas/i18n/validations_hu_public.properties",
+          "sha256": "eb5bdf362c3ffac71d036ca70b891eb7607c423e714e4aa05f42d078fd969531"
+        },
+        {
+          "source_path": "src/i18n/messages_hu_public.properties",
+          "vendored_path": "schemas/i18n/messages_hu_public.properties",
+          "sha256": "d51425243bb3f2b85ff1c50161ec57d3d0166871d4dd5299902b2c0f3668c3b0"
+        },
+        {
+          "source_path": "src/i18n/validations_en_public.properties",
+          "vendored_path": "schemas/i18n/validations_en_public.properties",
+          "sha256": "ec1b89019ea122e1309a7abe69d78542d59841dabd9e8a0a4fac66cdf4aa74b5"
+        },
+        {
+          "source_path": "src/i18n/messages_en_public.properties",
+          "vendored_path": "schemas/i18n/messages_en_public.properties",
+          "sha256": "ec138b6319e96f3cd55e0dd320cf891a4531a83ce661dacc929c89996590050b"
+        },
+        {
+          "source_path": "src/i18n/validations_de_public.properties",
+          "vendored_path": "schemas/i18n/validations_de_public.properties",
+          "sha256": "d51890d71f14f21131800a6e1b972f8abd66e1f67a8170eee1b908f1fe7e4a3f"
+        },
+        {
+          "source_path": "src/i18n/messages_de_public.properties",
+          "vendored_path": "schemas/i18n/messages_de_public.properties",
+          "sha256": "808731d4ff90219fa74a7144fa0bd772669cade3458889ded3fde6b9c20b9a54"
+        },
+        {
+          "source_path": "sample/API sample/manageAnnulment.xml",
+          "vendored_path": "conformance/api-samples/manageannulment.xml",
+          "sha256": "bf82ff7e9a561b7774663c67aafa95542c9f043ae493702e690e0c814257d69c"
+        },
+        {
+          "source_path": "sample/API sample/manageInvoice.xml",
+          "vendored_path": "conformance/api-samples/manageinvoice.xml",
+          "sha256": "cb45e7b918eab2c581e2daaaa15e9bc0ae3d58d434d81d9afc216be7ee06e928"
+        },
+        {
+          "source_path": "sample/API sample/queryInvoiceChainDigest.xml",
+          "vendored_path": "conformance/api-samples/queryinvoicechaindigest.xml",
+          "sha256": "af14391d34ed718279b6c07e79545217588dbd4f0ee993a8577c319a69d137d9"
+        },
+        {
+          "source_path": "sample/API sample/queryInvoiceCheck.xml",
+          "vendored_path": "conformance/api-samples/queryinvoicecheck.xml",
+          "sha256": "d071d264a48f12c369a577f6a309fb9c223b166b6377d04a3cfef9a015235003"
+        },
+        {
+          "source_path": "sample/API sample/queryInvoiceData.xml",
+          "vendored_path": "conformance/api-samples/queryinvoicedata.xml",
+          "sha256": "3ef6a4723f9c172df8406c3c5dc1c080792212b837cebb6b067ebe2c35c06c42"
+        },
+        {
+          "source_path": "sample/API sample/queryInvoiceDigest_inbound_invoice_chain.xml",
+          "vendored_path": "conformance/api-samples/queryinvoicedigest-inbound-invoice-chain.xml",
+          "sha256": "c56786f15117e96e2c5119eacce9e946157b304ed8ff2f713189868c3907faab"
+        },
+        {
+          "source_path": "sample/API sample/queryInvoiceDigest_outbound_query_params.xml",
+          "vendored_path": "conformance/api-samples/queryinvoicedigest-outbound-query-params.xml",
+          "sha256": "a9331f059ff799b2f15736a082836658ae4f01900e4272452454123171340231"
+        },
+        {
+          "source_path": "sample/API sample/queryTaxpayer.xml",
+          "vendored_path": "conformance/api-samples/querytaxpayer.xml",
+          "sha256": "5dede353aaa66fb9a9788beccf93b1d7b1079fe71dae54eb198875df08f59d11"
+        },
+        {
+          "source_path": "sample/API sample/queryTransactionList.xml",
+          "vendored_path": "conformance/api-samples/querytransactionlist.xml",
+          "sha256": "87c32c8df29411daf3f59d3980070d41ef5a59196dbf4694323226b624991d66"
+        },
+        {
+          "source_path": "sample/API sample/queryTransactionStatus.xml",
+          "vendored_path": "conformance/api-samples/querytransactionstatus.xml",
+          "sha256": "5ba610c6c9af000224d1ee6f9fa1e6cc13c66de991d3f880de18f8e76b0c7e85"
+        },
+        {
+          "source_path": "sample/API sample/tokenExchange.xml",
+          "vendored_path": "conformance/api-samples/tokenexchange.xml",
+          "sha256": "0fe759132116518e7cc38637904e570da71d6cfba99f2495c97451f2118758ef"
+        },
+        {
+          "source_path": "sample/Data sample/Belfoldi devizas szamla.xml",
+          "vendored_path": "conformance/data-samples/belfoldi-devizas-szamla.xml",
+          "sha256": "7d95ed76e7390b5082592fee5bc98e8ee5ddb87331b31841d943af25d05fcf76"
+        },
+        {
+          "source_path": "sample/Data sample/Belfoldi devizas vegszamla tobb eloleg tetel.xml",
+          "vendored_path": "conformance/data-samples/belfoldi-devizas-vegszamla-tobb-eloleg-tetel.xml",
+          "sha256": "a84820d0e3c25a2415aab767c8361a8cf8dacf78e14274c7d5e434301935e94d"
+        },
+        {
+          "source_path": "sample/Data sample/Belfoldi egyszerusitett szamla.xml",
+          "vendored_path": "conformance/data-samples/belfoldi-egyszerusitett-szamla.xml",
+          "sha256": "9f885d2b29d7affe36f668afdd07a44e201e223d4f94c7fc81b182c90bdf04a2"
+        },
+        {
+          "source_path": "sample/Data sample/Belfoldi elolegszamla egysegar nelkul .xml",
+          "vendored_path": "conformance/data-samples/belfoldi-elolegszamla-egysegar-nelkul.xml",
+          "sha256": "92269a42139b862a6b566069d0c84beacaa29d027533556b4ea30b07c92f0785"
+        },
+        {
+          "source_path": "sample/Data sample/Belfoldi elolegszamla.xml",
+          "vendored_path": "conformance/data-samples/belfoldi-elolegszamla.xml",
+          "sha256": "d2c0118f83532586a6ff6b9129fd6ef04ab49bacc40f46567a4dc085b647dc50"
+        },
+        {
+          "source_path": "sample/Data sample/Belfoldi ertekesites tobb AFA tipus.xml",
+          "vendored_path": "conformance/data-samples/belfoldi-ertekesites-tobb-afa-tipus.xml",
+          "sha256": "315e105e281b0af371c988239b94d45e08943304d6ac455f41484c83b882ec1d"
+        },
+        {
+          "source_path": "sample/Data sample/Belfoldi termekertekesites AFA csoportok kozott.xml",
+          "vendored_path": "conformance/data-samples/belfoldi-termekertekesites-afa-csoportok-kozott.xml",
+          "sha256": "f7c4d29843cf9fb53f81872e4284bc10b5c0cbe349e2b5d691f7c16090194245"
+        },
+        {
+          "source_path": "sample/Data sample/Belfoldi termekertekesites maganszemelynek.xml",
+          "vendored_path": "conformance/data-samples/belfoldi-termekertekesites-maganszemelynek.xml",
+          "sha256": "bdd307786e4ac5d3e2db70dbf31a1d4d1466dc21f1977019b9bc383dae45c7a7"
+        },
+        {
+          "source_path": "sample/Data sample/Belfoldi termekertekesites tetelbol adott engedmennyel.xml",
+          "vendored_path": "conformance/data-samples/belfoldi-termekertekesites-tetelbol-adott-engedmennyel.xml",
+          "sha256": "02af0066ffffe5772e198e89f1d03a041afbae19ceabc104d4e8bf98e15f2f7b"
+        },
+        {
+          "source_path": "sample/Data sample/Belfoldi termekertekesites.xml",
+          "vendored_path": "conformance/data-samples/belfoldi-termekertekesites.xml",
+          "sha256": "d9023dfb7405cc03814b464cf0911dffa116326cef64ac90e335f75a1976badf"
+        },
+        {
+          "source_path": "sample/Data sample/Belfoldi vegszamla.xml",
+          "vendored_path": "conformance/data-samples/belfoldi-vegszamla.xml",
+          "sha256": "9a96fe789961bdc6c1f6439f179abe00cc7642dd599b4b19c05790cddfe81a73"
+        },
+        {
+          "source_path": "sample/Data sample/Eredeti szamla modositasokhoz.xml",
+          "vendored_path": "conformance/data-samples/eredeti-szamla-modositasokhoz.xml",
+          "sha256": "259b5996a4936621aff00496df7710673a43cc9dfc3298ec81aadf190fd733ab"
+        },
+        {
+          "source_path": "sample/Data sample/Gyujtoszamla 1.xml",
+          "vendored_path": "conformance/data-samples/gyujtoszamla-1.xml",
+          "sha256": "0a751855c2a800c39d30a7e388d1a047df85c009d016137b10326a1d79bbdb01"
+        },
+        {
+          "source_path": "sample/Data sample/Gyujtoszamla 2.xml",
+          "vendored_path": "conformance/data-samples/gyujtoszamla-2.xml",
+          "sha256": "199207f00bb03218068f025c46ceaeeaa0aebda31bc9d95493d2c506a003322d"
+        },
+        {
+          "source_path": "sample/Data sample/Harmadik orszagbeli devizas szamla.xml",
+          "vendored_path": "conformance/data-samples/harmadik-orszagbeli-devizas-szamla.xml",
+          "sha256": "3c42bfaabb2f9d59ee5eeca40f4c985fb78a0b75476233a0400cc94719213b67"
+        },
+        {
+          "source_path": "sample/Data sample/Modositas es ervenytelenites 1.xml",
+          "vendored_path": "conformance/data-samples/modositas-es-ervenytelenites-1.xml",
+          "sha256": "dc2ef9704c99e11a17152ec5e51d28c1f3e51bdf347c543da08d122016ac4fb2"
+        },
+        {
+          "source_path": "sample/Data sample/Modositas es ervenytelenites 2.xml",
+          "vendored_path": "conformance/data-samples/modositas-es-ervenytelenites-2.xml",
+          "sha256": "1ceed3a18b0d2e72d6d3fdf46f9d2257f43ed0c017d49ed24696fe34eb1b58f7"
+        },
+        {
+          "source_path": "sample/Data sample/Tagorszagi devizas szamla.xml",
+          "vendored_path": "conformance/data-samples/tagorszagi-devizas-szamla.xml",
+          "sha256": "d3dbae884c02f3c745a1917afd04488d759b7691fd9bc39dfdae94b78854d971"
+        },
+        {
+          "source_path": "sample/Data sample/Termekdijas szamla.xml",
+          "vendored_path": "conformance/data-samples/termekdijas-szamla.xml",
+          "sha256": "f2de3280ddc1dd9a50b83e93ef16b0d6264d873a6176c8c5374a3b5f00282410"
+        },
+        {
+          "source_path": "sample/Data sample/Teteladatok modositasa.xml",
+          "vendored_path": "conformance/data-samples/teteladatok-modositasa.xml",
+          "sha256": "0ccfe127eb3b10f5a209ce10800640f151a15c132ac6685582f588869e9e6f3e"
+        },
+        {
+          "source_path": "sample/Data sample/Teves termek helyesbitese 20.xml",
+          "vendored_path": "conformance/data-samples/teves-termek-helyesbitese-20.xml",
+          "sha256": "6f6ed817f9aa1b70f844545e1e5866d208192e73610539a906a2cfce157f1ed3"
+        },
+        {
+          "source_path": "sample/Data sample/Teves termek helyesbitese 21.xml",
+          "vendored_path": "conformance/data-samples/teves-termek-helyesbitese-21.xml",
+          "sha256": "026d40c6671b8b1f6bc1c713bbb5edbe292eaf96d3a147cf094cf8589ed4c0ac"
+        },
+        {
+          "source_path": "sample/Data sample/Teves termek helyesbitese.xml",
+          "vendored_path": "conformance/data-samples/teves-termek-helyesbitese.xml",
+          "sha256": "78f69a82df22ed077aa33d35922ae06ad5c7c47f9ed5a514ba2b7c7bcd855f68"
+        },
+        {
+          "source_path": "sample/Data sample/Tobb szamla modositasa egy okirattal alap 1.xml",
+          "vendored_path": "conformance/data-samples/tobb-szamla-modositasa-egy-okirattal-alap-1.xml",
+          "sha256": "d9b463f8e16775dc53bfd455576856ed2e08d950ec1daa5fdcf1eb1834accdc2"
+        },
+        {
+          "source_path": "sample/Data sample/Tobb szamla modositasa egy okirattal alap 2.xml",
+          "vendored_path": "conformance/data-samples/tobb-szamla-modositasa-egy-okirattal-alap-2.xml",
+          "sha256": "e9bf4e22630cdeccd631605cc55fb0afdf59b64275c3eba530d0020bf7fd8d9a"
+        },
+        {
+          "source_path": "sample/Data sample/Tobb szamla modositasa egy okirattal alap 3.xml",
+          "vendored_path": "conformance/data-samples/tobb-szamla-modositasa-egy-okirattal-alap-3.xml",
+          "sha256": "b194f03232557f77cd2ee2c2a6d8af0892eeb62d0f37207d352fe85bf47572bb"
+        },
+        {
+          "source_path": "sample/Data sample/Tobb szamla modositasa egy okirattal.xml",
+          "vendored_path": "conformance/data-samples/tobb-szamla-modositasa-egy-okirattal.xml",
+          "sha256": "1298d5384f7abd02a25348c5a0b5d02066c4449ddb013c6afefa419f5c530742"
+        },
+        {
+          "source_path": "sample/Data sample/Tobbszoros modositas 1.xml",
+          "vendored_path": "conformance/data-samples/tobbszoros-modositas-1.xml",
+          "sha256": "9adae51c943da800dba377382f986523cff7b9e848fadbf388de5e0c694f0bde"
+        },
+        {
+          "source_path": "sample/Data sample/Tobbszoros modositas 2.xml",
+          "vendored_path": "conformance/data-samples/tobbszoros-modositas-2.xml",
+          "sha256": "65174c13e8d68169782ba345202dcc4996fd50e65fc462666431cbf7b6c29038"
+        },
+        {
+          "source_path": "sample/Data sample/Uj kozlekedesi eszkoz export.xml",
+          "vendored_path": "conformance/data-samples/uj-kozlekedesi-eszkoz-export.xml",
+          "sha256": "ed6213ebeaf840a60066dd36e5935f7322c45d23bad85965044f601a9b4aa5af"
+        }
+      ]
+    },
+    {
+      "repo": "https://github.com/nav-gov-hu/Common",
+      "revision": "Common-1.0.RC3",
+      "licence": "MIT (c) Nemzeti Ado- es Vamhivatal",
+      "files": [
+        {
+          "source_path": "src/schemas/nav/gov/hu/NTCA/common.xsd",
+          "vendored_path": "schemas/NTCA/1.0/common.xsd",
+          "sha256": "9b323063773718c0bbd9ce3cb22e30e6fac409fb3b6327e39d59e7aab9759541"
+        }
+      ]
+    }
+  ]
+}

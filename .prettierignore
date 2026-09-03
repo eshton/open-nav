@@ -1,3 +1,7 @@
 dist/
 coverage/
 pnpm-lock.yaml
+
+# Vendored verbatim from NAV — must not be reformatted (see schemas/README.md)
+schemas/
+conformance/
