@@ -1,0 +1,24 @@
+{
+  "name": "@open-nav/core",
+  "version": "0.1.0",
+  "description": "Types, invoice building, XML serialisation and cryptography for the Hungarian NAV Online Számla API",
+  "keywords": ["nav", "onlineszamla", "online-szamla", "hungary", "invoice", "einvoice", "tax"],
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "engines": { "node": ">=20.10.0" },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^4.5.1"
+  }
+}
