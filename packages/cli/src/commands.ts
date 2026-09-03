@@ -81,22 +81,40 @@ export const COMMANDS: CommandDefinition[] = [
     async run(_positionals, _flags, context) {
       const { env, envFiles } = loadEnvironment(context.load);
       const variables = describeConfig(env);
-      const missing = variables.filter((variable) => !variable.set).map((v) => v.variable);
-      const data = { envFiles, variables, missing };
+      const missing = variables
+        .filter((variable) => variable.required && !variable.set)
+        .map((variable) => variable.variable);
+      const data = { envFiles, ready: missing.length === 0, variables, missing };
+
+      // Required and optional are shown apart: an unset optional variable
+      // with a working default is not a problem, and calling it "missing"
+      // sends people hunting for something that is not wrong.
+      const describe = (variable: (typeof variables)[number]): string => {
+        const status = variable.set ? 'set     ' : variable.required ? 'MISSING ' : 'default ';
+        const shown = variable.set
+          ? variable.secret
+            ? ' = ********'
+            : ` = ${variable.value}`
+          : variable.default !== undefined
+            ? ` = ${variable.default}`
+            : '';
+        return `  ${status} ${variable.variable}${shown}`;
+      };
+
       writeResult(context.writer, context.format, 'config', data, () => [
         envFiles.length > 0 ? `Env files: ${envFiles.join(', ')}` : 'Env files: none found',
         '',
-        ...variables.map(
-          (variable) =>
-            `  ${variable.set ? 'set    ' : 'missing'}  ${variable.variable}` +
-            (variable.value
-              ? ` = ${variable.value}`
-              : variable.secret && variable.set
-                ? ' = ********'
-                : ''),
-        ),
+        'Required:',
+        ...variables.filter((variable) => variable.required).map(describe),
+        '',
+        'Optional:',
+        ...variables.filter((variable) => !variable.required).map(describe),
+        '',
+        missing.length === 0
+          ? 'Ready. Check the credentials for real with: open-nav token'
+          : `Not ready: ${missing.join(', ')} still needed.`,
       ]);
-      return EXIT.ok;
+      return missing.length === 0 ? EXIT.ok : EXIT.usage;
     },
   },
 

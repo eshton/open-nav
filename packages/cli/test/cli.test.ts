@@ -174,9 +174,39 @@ describe('credentials', () => {
     expect(printed).toContain('testlogin123');
   });
 
-  it('reports which variables are still missing', async () => {
-    const { json } = await cli(['config', '--no-env-file'], { env: { NAV_LOGIN: 'testlogin123' } });
-    expect((json()['data'] as { missing: string[] }).missing).toContain('NAV_PASSWORD');
+  it('reports which required variables are still missing, and is not ready', async () => {
+    const { code, json } = await cli(['config', '--no-env-file'], {
+      env: { NAV_LOGIN: 'testlogin123' },
+    });
+    const data = json()['data'] as { missing: string[]; ready: boolean };
+    expect(data.missing).toContain('NAV_PASSWORD');
+    expect(data.ready).toBe(false);
+    // config doubles as a readiness check, so a caller can branch on it.
+    expect(code).toBe(EXIT.usage);
+  });
+
+  it('does not count an optional variable with a default as missing', async () => {
+    const { code, json } = await cli(['config', '--no-env-file'], {
+      env: {
+        NAV_LOGIN: 'testlogin123',
+        NAV_PASSWORD: 'x',
+        NAV_SIGN_KEY: 'x',
+        NAV_EXCHANGE_KEY: '0123456789abcdef',
+        NAV_TAX_NUMBER: '11111111',
+        NAV_SOFTWARE_ID: 'OPENNAV000000001',
+      },
+    });
+    const data = json()['data'] as {
+      missing: string[];
+      ready: boolean;
+      variables: Array<{ variable: string; required: boolean; default?: string }>;
+    };
+    expect(data.missing).toEqual([]);
+    expect(data.ready).toBe(true);
+    expect(code).toBe(EXIT.ok);
+
+    const environment = data.variables.find((entry) => entry.variable === 'NAV_ENVIRONMENT');
+    expect(environment).toMatchObject({ required: false, default: 'test' });
   });
 });
 

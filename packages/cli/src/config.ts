@@ -36,6 +36,26 @@ export const SECRET_VARS = new Set<string>([
 
 const ENV_FILE_NAMES = ['.env.open-nav', '.env.local', '.env'];
 
+/** Variables without which nothing can talk to NAV. */
+export const REQUIRED_VARS: readonly string[] = [
+  ENV_VARS.login,
+  ENV_VARS.password,
+  ENV_VARS.signKey,
+  ENV_VARS.exchangeKey,
+  ENV_VARS.taxNumber,
+  ENV_VARS.softwareId,
+];
+
+/** Defaults applied when an optional variable is unset. */
+export const DEFAULTS: Readonly<Record<string, string>> = {
+  [ENV_VARS.environment]: 'test',
+  [ENV_VARS.softwareName]: 'open-nav',
+  [ENV_VARS.softwareVersion]: '0.1.0',
+  [ENV_VARS.softwareOperation]: 'LOCAL_SOFTWARE',
+  [ENV_VARS.softwareDevName]: 'open-nav',
+  [ENV_VARS.softwareDevContact]: 'unknown',
+};
+
 export interface LoadedConfig {
   credentials: NavCredentials;
   software: SoftwareType;
@@ -134,21 +154,37 @@ export function loadEnvironment(options: LoadOptions = {}): {
   return { env: base, envFiles };
 }
 
-/** Which configuration variables are present, for the `config` command. */
-export function describeConfig(env: Record<string, string | undefined>): Array<{
+export interface ConfigVariableReport {
   variable: string;
   set: boolean;
+  required: boolean;
   secret: boolean;
+  /** Present for non-secret variables that are set. */
   value?: string;
-}> {
+  /** Value that applies when the variable is left unset. */
+  default?: string;
+}
+
+/**
+ * Which configuration variables are present, for the `config` command.
+ *
+ * Required and optional are reported separately: an unset optional variable
+ * with a working default is not a problem, and listing it as "missing" sends
+ * people hunting for something that is not wrong.
+ */
+export function describeConfig(env: Record<string, string | undefined>): ConfigVariableReport[] {
   return Object.values(ENV_VARS).map((variable) => {
     const value = env[variable];
     const secret = SECRET_VARS.has(variable);
+    const set = value !== undefined && value !== '';
+    const fallback = DEFAULTS[variable];
     return {
       variable,
-      set: value !== undefined && value !== '',
+      set,
+      required: REQUIRED_VARS.includes(variable),
       secret,
-      ...(value !== undefined && value !== '' && !secret ? { value } : {}),
+      ...(set && !secret ? { value } : {}),
+      ...(!set && fallback !== undefined ? { default: fallback } : {}),
     };
   });
 }
@@ -160,15 +196,7 @@ export function describeConfig(env: Record<string, string | undefined>): Array<{
 export function loadConfig(options: LoadOptions = {}): LoadedConfig {
   const { env, envFiles } = loadEnvironment(options);
 
-  const required = [
-    ENV_VARS.login,
-    ENV_VARS.password,
-    ENV_VARS.signKey,
-    ENV_VARS.exchangeKey,
-    ENV_VARS.taxNumber,
-    ENV_VARS.softwareId,
-  ];
-  const missing = required.filter((variable) => !env[variable]);
+  const missing = REQUIRED_VARS.filter((variable) => !env[variable]);
   if (missing.length > 0) {
     throw new UsageError(
       `Missing configuration: ${missing.join(', ')}.\n` +
