@@ -10,9 +10,9 @@
   },
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "build": "tsc -b packages/codegen packages/core packages/client",
+    "build": "tsc -b packages/codegen packages/core packages/client packages/cli",
     "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo",
-    "typecheck": "tsc -b --force packages/codegen packages/core packages/client",
+    "typecheck": "tsc -b --force packages/codegen packages/core packages/client packages/cli",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",

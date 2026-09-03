@@ -1,0 +1,34 @@
+{
+  "name": "@open-nav/cli",
+  "version": "0.1.0",
+  "description": "Command line tool for the Hungarian Tax Authority (NAV) Online Számla API",
+  "keywords": [
+    "nav",
+    "onlineszamla",
+    "hungary",
+    "invoice",
+    "cli",
+    "agent"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/main.js",
+  "types": "./dist/main.d.ts",
+  "bin": {
+    "open-nav": "./dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@open-nav/client": "workspace:^",
+    "@open-nav/core": "workspace:^"
+  }
+}

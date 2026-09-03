@@ -21,6 +21,15 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)
 
+  packages/cli:
+    dependencies:
+      '@open-nav/client':
+        specifier: workspace:^
+        version: link:../client
+      '@open-nav/core':
+        specifier: workspace:^
+        version: link:../core
+
   packages/client:
     dependencies:
       '@open-nav/core':

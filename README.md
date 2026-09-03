@@ -65,18 +65,19 @@ A library should absorb all four. That is the entire premise of this project.
 
 ## Layout
 
-| Path               | What it is                                                          |
-| ------------------ | ------------------------------------------------------------------- |
-| `packages/core`    | Types, crypto, XML, payload encoding, exact decimals, summary rules |
-| `packages/client`  | Client for all ten service operations, plus transaction polling     |
-| `packages/codegen` | Generates the types and schema metadata from the XSDs               |
-| `schemas/`         | Official NAV XSDs and message catalogues, vendored verbatim         |
-| `conformance/`     | NAV's own 41 sample documents, used as the golden test corpus       |
-| `scripts/`         | Schema vendoring and drift detection                                |
+| Path               | What it is                                                             |
+| ------------------ | ---------------------------------------------------------------------- |
+| `packages/core`    | Types, crypto, XML, payload encoding, exact decimals, validation       |
+| `packages/client`  | Client for all ten service operations, plus transaction polling        |
+| `packages/cli`     | `open-nav` command line tool, built for scripts and agents             |
+| `packages/codegen` | Generates the types, schema metadata and fault catalogue from the XSDs |
+| `schemas/`         | Official NAV XSDs and message catalogues, vendored verbatim            |
+| `conformance/`     | NAV's own 41 sample documents, used as the golden test corpus          |
+| `scripts/`         | Schema vendoring and drift detection                                   |
 
-Further packages — a CLI, a local mock of the invoice service, schema-level
-validation and invoice document generation — are landing incrementally. They
-are not stubbed out in advance.
+Still to come: a local mock of the invoice service, and invoice document
+generation with the 23/2014. (VI. 30.) NGM data export. Neither is stubbed out
+in advance.
 
 ## Approach
 
@@ -95,15 +96,73 @@ a round trip through this library would have been rejected by NAV.
 
 Being explicit, because it matters for anyone considering this in production:
 
-| Area                           | State                                                                                                                    |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| Cryptographic primitives       | Verified against published SHA-512 and SHA3-512 vectors                                                                  |
-| Request signature construction | Verified against all 11 of NAV's official request samples, including the three-invoice batch                             |
-| Schema round trip              | Verified against all 41 official NAV sample documents                                                                    |
-| Summary reconciliation         | Reproduces the summaries of 24 of NAV's 30 sample invoices; the other 6 are wrong upstream (see `conformance/README.md`) |
-| Client request building        | Verified by recomputing each signature from the request actually sent                                                    |
-| Exchange token decryption      | Round-trip tested for padded and unpadded tokens; no official vector exists                                              |
-| Live NAV test system           | **Not yet exercised** — no technical user credentials                                                                    |
+| Area                           | State                                                                                                                      |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Cryptographic primitives       | Verified against published SHA-512 and SHA3-512 vectors                                                                    |
+| Request signature construction | Verified against all 11 of NAV's official request samples, including the three-invoice batch                               |
+| Schema round trip              | Verified against all 41 official NAV sample documents                                                                      |
+| Schema validation              | Accepts all 41 official documents; every facet kind covered by tests                                                       |
+| Business rules                 | 24 of NAV's 30 sample invoices pass with no findings; the other 6 raise only the arithmetic faults that are wrong upstream |
+| Summary reconciliation         | Reproduces the summaries of those same 24 samples                                                                          |
+| Client request building        | Verified by recomputing each signature from the request actually sent                                                      |
+| Exchange token decryption      | Round-trip tested for padded and unpadded tokens; no official vector exists                                                |
+| Live NAV test system           | **Not yet exercised** — no technical user credentials                                                                      |
+
+## Validating before you send
+
+Local validation is the point of the library, not a sideline. Two layers run:
+the schema, generated from NAV's XSDs, and the business rules that are
+decidable from the document alone.
+
+```ts
+import { validateInvoice } from '@open-nav/core';
+
+const report = validateInvoice(invoice, { operation: 'CREATE' });
+if (!report.valid) {
+  for (const issue of report.errors) {
+    console.error(issue.code, issue.path, issue.message, issue.navMessage);
+  }
+}
+```
+
+Every finding carries **NAV's own fault code**, taken from the error catalogue
+NAV publishes and generated into a typed union of all 236 codes with their
+Hungarian, English and German wording. A rule cannot cite a code NAV does not
+define, and a local failure reads like the rejection it prevents. The handful
+of findings we raise that NAV has no code for are marked `origin: 'local'`
+rather than squeezed into an approximate one.
+
+Errors and warnings are kept apart deliberately. A tax number that fails its
+check digit is a **warning**: NAV validates tax numbers against its taxpayer
+registry, not arithmetically, and two of the four tax numbers in its own
+samples fail the check. Treating that as an error would reject documents the
+service accepts — and a validator that flags valid documents gets switched
+off. `queryTaxpayer` is the authority.
+
+## Command line
+
+```sh
+npx @open-nav/cli --help
+```
+
+Configuration comes from the environment or a `.env` file (see
+[.env.example](.env.example)); credentials are never taken as arguments,
+because that would put them in shell history and in agent transcripts.
+
+```sh
+cp .env.example .env
+open-nav config     # what is set, secrets masked
+open-nav token      # are the credentials real?
+open-nav validate invoice.xml --pretty
+open-nav submit invoice.xml --wait
+```
+
+It is built to be driven by a program as much as by a person: JSON output
+whenever stdout is not a terminal, one envelope for every result, meaningful
+exit codes (`3` invalid document, `4` rejected by NAV, `5` no verdict), and
+`--describe` to emit the whole command surface as JSON so a caller can
+discover it. `validate` and `fault` need no credentials at all. See
+[packages/cli/README.md](packages/cli/README.md).
 
 ## Requirements
 

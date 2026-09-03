@@ -399,8 +399,53 @@ describe('summary consistency', () => {
     const document = domesticSale();
     invoiceOf(document).invoiceSummary.summaryNormal!.invoiceNetAmount = '1.00';
     expect(codesOf(document, { operation: 'CREATE' })).toContain(
-      'INCORRECT_SUMMARY_CALCULATION_INVOICE_NET_AMOUNT',
+      'INCORRECT_SUMMARY_CALCULATION_VAT_RATE_NET_AMOUNT_SUMMARY',
     );
+  });
+
+  it('picks the NAV code that describes the actual discrepancy', () => {
+    // The suffixes carry meaning: a per-rate figure disagreeing with the
+    // lines is a different fault from an invoice total disagreeing with the
+    // per-rate figures, and each has its own forint counterpart.
+    const cases: Array<[string, (document: InvoiceData) => void, string]> = [
+      [
+        'per-rate net against the lines',
+        (document) => {
+          invoiceOf(
+            document,
+          ).invoiceSummary.summaryNormal!.summaryByVatRate[0]!.vatRateNetData.vatRateNetAmount =
+            '1.00';
+        },
+        'INCORRECT_SUMMARY_CALCULATION_VAT_RATE_NET_AMOUNT_LINE',
+      ],
+      [
+        'invoice VAT total against the per-rate figures',
+        (document) => {
+          invoiceOf(document).invoiceSummary.summaryNormal!.invoiceVatAmount = '1.00';
+        },
+        'INCORRECT_SUMMARY_CALCULATION_INVOICE_VAT_AMOUNT_SUMMARY',
+      ],
+      [
+        'forint VAT total',
+        (document) => {
+          invoiceOf(document).invoiceSummary.summaryNormal!.invoiceVatAmountHUF = '1.00';
+        },
+        'INCORRECT_SUMMARY_CALCULATION_INVOICE_VAT_AMOUNT_HUF_SUMMARY',
+      ],
+      [
+        'gross total against net plus VAT',
+        (document) => {
+          invoiceOf(document).invoiceSummary.summaryGrossData!.invoiceGrossAmount = '1.00';
+        },
+        'INCORRECT_SUMMARY_CALCULATION_INVOICE_GROSS_AMOUNT_SUMMARY',
+      ],
+    ];
+
+    for (const [name, mutate, expected] of cases) {
+      const document = domesticSale();
+      mutate(document);
+      expect(codesOf(document, { operation: 'CREATE' }), name).toContain(expected);
+    }
   });
 });
 

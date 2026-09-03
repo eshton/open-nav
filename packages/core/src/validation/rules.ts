@@ -1,6 +1,7 @@
 import type { InvoiceData, InvoiceType, LineType, SummaryType } from '../generated/types.js';
 import { Decimal } from '../money/decimal.js';
 import { checkInvoiceSummary, hasAmountBearingLines } from '../money/summary.js';
+import type { NavFaultCode } from '../generated/fault-codes.js';
 import type { IssueCollector } from './issue.js';
 import { isValidCountyCode, isValidTaxpayerId } from './tax-number.js';
 
@@ -224,24 +225,48 @@ function checkInvoice(
   }
 }
 
-/** Map a summary path to the closest NAV fault code. */
-function summaryFaultCode(
-  path: string,
-):
-  | 'INCORRECT_SUMMARY_CALCULATION_INVOICE_NET_AMOUNT'
-  | 'INCORRECT_SUMMARY_CALCULATION_INVOICE_VAT_AMOUNT'
-  | 'INCORRECT_SUMMARY_CALCULATION_INVOICE_GROSS_AMOUNT'
-  | 'INCORRECT_SUMMARY_CALCULATION_VAT_RATE_NET_AMOUNT_SUMMARY'
-  | 'INCORRECT_SUMMARY_CALCULATION_VAT_RATE_VAT_AMOUNT_SUMMARY' {
-  if (path.includes('vatRateNetData')) {
-    return 'INCORRECT_SUMMARY_CALCULATION_VAT_RATE_NET_AMOUNT_SUMMARY';
-  }
-  if (path.includes('vatRateVatData')) {
+/**
+ * The NAV fault code for a summary discrepancy.
+ *
+ * NAV distinguishes these carefully and the suffixes carry the meaning: a
+ * `_LINE` code means the lines disagree with the summary, a `_SUMMARY` code
+ * means the per-rate figures disagree with the invoice total, and `_HUF`
+ * marks the forint counterpart. Picking the wrong one would attach NAV
+ * wording that describes a different fault, which is worse than attaching
+ * none, so the mapping is explicit rather than inferred.
+ */
+function summaryFaultCode(path: string): NavFaultCode {
+  const huf = path.endsWith('HUF');
+  const perRate = path.includes('summaryByVatRate');
+  const field = path.split('.').pop() ?? '';
+
+  if (perRate) {
+    // A per-rate figure is compared against the lines carrying that rate.
+    if (field.startsWith('vatRateNet')) {
+      return huf
+        ? 'INCORRECT_SUMMARY_CALCULATION_VAT_RATE_NET_AMOUNT_HUF_LINE'
+        : 'INCORRECT_SUMMARY_CALCULATION_VAT_RATE_NET_AMOUNT_LINE';
+    }
+    if (field.startsWith('vatRateGross')) {
+      return 'INCORRECT_SUMMARY_CALCULATION_VAT_RATE_GROSS_AMOUNT_LINE';
+    }
     return 'INCORRECT_SUMMARY_CALCULATION_VAT_RATE_VAT_AMOUNT_SUMMARY';
   }
-  if (path.includes('GrossAmount')) return 'INCORRECT_SUMMARY_CALCULATION_INVOICE_GROSS_AMOUNT';
-  if (path.includes('VatAmount')) return 'INCORRECT_SUMMARY_CALCULATION_INVOICE_VAT_AMOUNT';
-  return 'INCORRECT_SUMMARY_CALCULATION_INVOICE_NET_AMOUNT';
+
+  // An invoice total is compared against the sum of the per-rate figures.
+  if (field.startsWith('invoiceNet')) {
+    return huf
+      ? 'INCORRECT_SUMMARY_CALCULATION_INVOICE_NET_AMOUNT_HUF'
+      : 'INCORRECT_SUMMARY_CALCULATION_VAT_RATE_NET_AMOUNT_SUMMARY';
+  }
+  if (field.startsWith('invoiceVat')) {
+    return huf
+      ? 'INCORRECT_SUMMARY_CALCULATION_INVOICE_VAT_AMOUNT_HUF_SUMMARY'
+      : 'INCORRECT_SUMMARY_CALCULATION_INVOICE_VAT_AMOUNT_SUMMARY';
+  }
+  return huf
+    ? 'INCORRECT_SUMMARY_CALCULATION_INVOICE_GROSS_AMOUNT_HUF_SUMMARY'
+    : 'INCORRECT_SUMMARY_CALCULATION_INVOICE_GROSS_AMOUNT_SUMMARY';
 }
 
 function checkCustomer(
