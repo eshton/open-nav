@@ -275,7 +275,7 @@ describe('the tools that talk to NAV', () => {
     const listed = payload(
       await client.callTool({
         name: 'list_invoices',
-        arguments: { dateFrom: '2021-01-01', dateTo: '2021-12-31' },
+        arguments: { dateFrom: '2021-05-01', dateTo: '2021-05-31' },
       }),
     ) as { invoices: Array<{ invoiceNumber: string }> };
     expect(listed.invoices).toHaveLength(1);

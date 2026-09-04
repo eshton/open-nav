@@ -17,6 +17,7 @@ export interface RunOptions {
   writeFile?: (path: string, contents: string) => void;
   writeBinaryFile?: (path: string, contents: Buffer) => void;
   readBinaryFile?: (path: string) => Buffer;
+  fileExists?: (path: string) => boolean;
 }
 
 const GLOBAL_OPTIONS = {
@@ -64,6 +65,8 @@ export async function run(options: RunOptions): Promise<ExitCode> {
         logo: { type: 'string' },
         browser: { type: 'string' },
         'no-sandbox': { type: 'boolean' },
+        delay: { type: 'string' },
+        refresh: { type: 'boolean' },
         'number-from': { type: 'string' },
         'number-to': { type: 'string' },
         'warnings-as-errors': { type: 'boolean' },
@@ -120,6 +123,7 @@ export async function run(options: RunOptions): Promise<ExitCode> {
     ...(options.writeFile ? { writeFile: options.writeFile } : {}),
     ...(options.writeBinaryFile ? { writeBinaryFile: options.writeBinaryFile } : {}),
     ...(options.readBinaryFile ? { readBinaryFile: options.readBinaryFile } : {}),
+    ...(options.fileExists ? { fileExists: options.fileExists } : {}),
   };
 
   try {

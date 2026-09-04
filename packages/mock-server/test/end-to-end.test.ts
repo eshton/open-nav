@@ -270,7 +270,7 @@ describe('queries', () => {
       invoiceDirection: 'OUTBOUND',
       invoiceQueryParams: {
         mandatoryQueryParams: {
-          invoiceIssueDate: { dateFrom: '2021-01-01', dateTo: '2021-12-31' },
+          invoiceIssueDate: { dateFrom: '2021-05-01', dateTo: '2021-05-31' },
         },
       },
     });
@@ -288,7 +288,7 @@ describe('queries', () => {
       invoiceDirection: 'OUTBOUND',
       invoiceQueryParams: {
         mandatoryQueryParams: {
-          invoiceIssueDate: { dateFrom: '2030-01-01', dateTo: '2030-12-31' },
+          invoiceIssueDate: { dateFrom: '2030-05-01', dateTo: '2030-05-31' },
         },
       },
     });

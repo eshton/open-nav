@@ -460,13 +460,17 @@ export function handleQueryInvoiceCheck(
   state: MockState,
 ): HandlerResult {
   authenticate(context, config, state);
-  const query = (context.document.value as { invoiceNumberQuery?: { invoiceNumber?: string } })
-    .invoiceNumberQuery;
+  const query = (
+    context.document.value as {
+      invoiceNumberQuery?: { invoiceNumber?: string; invoiceDirection?: string };
+    }
+  ).invoiceNumberQuery;
+  const store = query?.invoiceDirection === 'INBOUND' ? state.inbound : state.invoices;
   return {
     status: 200,
     body: serializeDocument('QueryInvoiceCheckResponse', {
       ...ok(config),
-      invoiceCheckResult: state.invoices.has(query?.invoiceNumber ?? ''),
+      invoiceCheckResult: store.has(query?.invoiceNumber ?? ''),
     }),
   };
 }
@@ -477,9 +481,28 @@ export function handleQueryInvoiceData(
   state: MockState,
 ): HandlerResult {
   authenticate(context, config, state);
-  const query = (context.document.value as { invoiceNumberQuery?: { invoiceNumber?: string } })
-    .invoiceNumberQuery;
-  const stored = state.invoices.get(query?.invoiceNumber ?? '');
+  const query = (
+    context.document.value as {
+      invoiceNumberQuery?: {
+        invoiceNumber?: string;
+        invoiceDirection?: string;
+        supplierTaxNumber?: string;
+      };
+    }
+  ).invoiceNumberQuery;
+
+  const inbound = query?.invoiceDirection === 'INBOUND';
+
+  // NAV only accepts a supplier tax number when querying as the customer.
+  if (!inbound && query?.supplierTaxNumber !== undefined) {
+    throw new MockError(
+      'INVALID_REQUEST',
+      'BAD_QUERY_PARAM_SUPPLIER_NOT_EXPECTED: the supplier tax number is only usable when querying as customer',
+    );
+  }
+
+  const store = inbound ? state.inbound : state.invoices;
+  const stored = store.get(query?.invoiceNumber ?? '');
 
   if (!stored) {
     return { status: 200, body: serializeDocument('QueryInvoiceDataResponse', { ...ok(config) }) };
@@ -520,7 +543,22 @@ export function handleQueryInvoiceDigest(
   };
   const range = value.invoiceQueryParams?.mandatoryQueryParams?.invoiceIssueDate;
 
-  const matching = [...state.invoices.values()].filter((invoice) => {
+  // NAV rejects a window wider than 35 days, so the mock does too: that is
+  // what proves a caller splits its range instead of asking for a year.
+  if (range?.dateFrom && range?.dateTo) {
+    const days =
+      (Date.parse(`${range.dateTo}T00:00:00Z`) - Date.parse(`${range.dateFrom}T00:00:00Z`)) /
+      86_400_000;
+    if (days > 34) {
+      throw new MockError(
+        'INVALID_REQUEST',
+        'BAD_QUERY_PARAM_RANGE_EXCEEDED: date interval defined by the query parameters must not exceed 35 days',
+      );
+    }
+  }
+
+  const store = value.invoiceDirection === 'INBOUND' ? state.inbound : state.invoices;
+  const matching = [...store.values()].filter((invoice) => {
     if (range?.dateFrom && invoice.issueDate < range.dateFrom) return false;
     if (range?.dateTo && invoice.issueDate > range.dateTo) return false;
     return true;

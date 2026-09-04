@@ -477,3 +477,70 @@ describe('render to PDF', () => {
     expect((json()['error'] as { code: string }).code).toBe('PDF_CONVERSION');
   });
 });
+
+describe('pull', () => {
+  it('requires an output directory and a date range', async () => {
+    const missingOut = await cli(['pull', '--from', '2025-01-01', '--to', '2025-01-31']);
+    expect(missingOut.code).toBe(EXIT.usage);
+    expect((missingOut.json()['error'] as { message: string }).message).toContain('--out');
+
+    const missingRange = await cli(['pull', '--out', 'inbox']);
+    expect(missingRange.code).toBe(EXIT.usage);
+    expect((missingRange.json()['error'] as { message: string }).message).toContain('--from');
+  });
+
+  it('rejects a nonsense direction and a negative delay', async () => {
+    const badDirection = await cli([
+      'pull',
+      '--out',
+      'inbox',
+      '--from',
+      '2025-01-01',
+      '--to',
+      '2025-01-31',
+      '--direction',
+      'sideways',
+    ]);
+    expect(badDirection.code).toBe(EXIT.usage);
+
+    // --delay=-5, because a bare -5 is parsed as an option, not a value.
+    const badDelay = await cli([
+      'pull',
+      '--out',
+      'inbox',
+      '--from',
+      '2025-01-01',
+      '--to',
+      '2025-01-31',
+      '--delay=-5',
+    ]);
+    expect(badDelay.code).toBe(EXIT.usage);
+    expect((badDelay.json()['error'] as { message: string }).message).toContain('--delay');
+  });
+
+  it('rejects a reversed date range before contacting NAV', async () => {
+    const { code, json } = await cli(
+      ['pull', '--out', 'inbox', '--from', '2025-02-01', '--to', '2025-01-01'],
+      {
+        env: {
+          NAV_LOGIN: 'testlogin123',
+          NAV_PASSWORD: 'p',
+          NAV_SIGN_KEY: 's',
+          NAV_EXCHANGE_KEY: '0123456789abcdef',
+          NAV_TAX_NUMBER: '11111111',
+          NAV_SOFTWARE_ID: 'OPENNAVTEST000001',
+        },
+      },
+    );
+    expect(code).toBe(EXIT.failure);
+    expect((json()['error'] as { message: string }).message).toContain('is after');
+  });
+
+  it('advertises itself as needing credentials', async () => {
+    const { json } = await cli(['--describe']);
+    const pull = (json()['commands'] as Array<{ name: string; needsCredentials: boolean }>).find(
+      (command) => command.name === 'pull',
+    );
+    expect(pull?.needsCredentials).toBe(true);
+  });
+});

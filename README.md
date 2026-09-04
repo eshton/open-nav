@@ -210,6 +210,51 @@ the export is produced in `invoiceData.xsd` — the schema already generated,
 validated and round-tripped here. If an auditor asks for the Annex 3
 structure specifically, this is not it.
 
+## Downloading invoices you received
+
+```sh
+open-nav pull --out inbox/ --from 2025-01-01 --to 2025-12-31
+```
+
+Inbound by default. Files land as
+`inbox/inbound/2025-03/BESZ-2025-002.xml` with an `index.json` beside them,
+and a re-run skips what is already on disk, so an interrupted pull resumes.
+
+Two details the library absorbs, both confirmed from NAV's specification and
+its own error catalogue:
+
+- **A digest query may not span more than 35 days**
+  (`BAD_QUERY_PARAM_RANGE_EXCEEDED`: _"Date interval defined by the query
+  parameters must not exceed 35 days"_). A year-long range is split into
+  windows automatically — asking for one directly is simply refused.
+- **An inbound invoice must be fetched with the supplier's tax number**, which
+  is only knowable from the digest entry that named it, and NAV refuses that
+  same parameter on an outbound query
+  (`BAD_QUERY_PARAM_SUPPLIER_NOT_EXPECTED`). The direction decides, and the
+  mock service enforces both rules so the tests prove it.
+
+In code, as a stream rather than a list, so a large range does not have to fit
+in memory:
+
+```ts
+import { iterateInvoices } from '@open-nav/client';
+
+for await (const { digest, invoice, xml } of iterateInvoices(client, {
+  direction: 'INBOUND',
+  dateFrom: '2025-01-01',
+  dateTo: '2025-12-31',
+})) {
+  console.log(
+    digest.invoiceNumber,
+    invoice.invoiceMain.invoice?.invoiceHead.supplierInfo.supplierName,
+  );
+}
+```
+
+`iterateInvoiceDigests` walks the summaries alone, which is one request per
+hundred invoices rather than one per invoice — enough to survey a period
+before deciding what to fetch in full.
+
 ## For an AI agent
 
 [`packages/mcp`](packages/mcp/README.md) exposes all of this over MCP.

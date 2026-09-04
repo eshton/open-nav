@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import {
   NavApiError,
@@ -10,7 +10,13 @@ import {
   type InvoiceData,
   type InvoiceValidationIssue,
 } from '@open-nav/core';
-import { NavClient, waitForTransaction } from '@open-nav/client';
+import {
+  MAX_QUERY_DAYS,
+  NavClient,
+  chunkDateRange,
+  iterateInvoices,
+  waitForTransaction,
+} from '@open-nav/client';
 import {
   createDataExport,
   embedImage,
@@ -35,6 +41,8 @@ export interface CommandContext {
   writeBinaryFile?: (path: string, contents: Buffer) => void;
   /** Read binary input, for logos. */
   readBinaryFile?: (path: string) => Buffer;
+  /** Whether a path already exists, so a download can resume. */
+  fileExists?: (path: string) => boolean;
 }
 
 export interface CommandDefinition {
@@ -112,6 +120,12 @@ function resolveThemeFlags(
   return theme;
 }
 
+/** An invoice number can contain characters a file name cannot. */
+function safeName(invoiceNumber: string): string {
+  const cleaned = invoiceNumber.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
+  return cleaned === '' ? 'invoice' : cleaned;
+}
+
 /** Read an InvoiceData document, failing clearly if it is something else. */
 function readInvoice(path: string, context: CommandContext): InvoiceData {
   const parsed = parseDocument(readInput(path, context), { unknownElements: 'ignore' });
@@ -127,8 +141,18 @@ function requirePositional(positionals: string[], index: number, name: string): 
   return value;
 }
 
-function direction(flags: Record<string, string | boolean | undefined>): 'INBOUND' | 'OUTBOUND' {
-  const value = flags['direction'] ?? 'OUTBOUND';
+/**
+ * Read `--direction`.
+ *
+ * The default differs by command: a query is usually about your own invoices,
+ * while a bulk pull is usually about the ones you received, so each command
+ * states its own fallback rather than sharing one.
+ */
+function direction(
+  flags: Record<string, string | boolean | undefined>,
+  fallback: 'INBOUND' | 'OUTBOUND' = 'OUTBOUND',
+): 'INBOUND' | 'OUTBOUND' {
+  const value = flags['direction'] ?? fallback;
   const upper = String(value).toUpperCase();
   if (upper !== 'INBOUND' && upper !== 'OUTBOUND') {
     throw new UsageError('--direction must be inbound or outbound');
@@ -667,6 +691,96 @@ export const COMMANDS: CommandDefinition[] = [
         `Exported ${result.manifest.invoiceCount} of ${invoices.length} invoice(s) to ${out}.`,
         `Structure: ${result.manifest.structure.schema}`,
         `Basis: ${result.manifest.structure.basis}`,
+      ]);
+      return EXIT.ok;
+    },
+  },
+
+  {
+    name: 'pull',
+    summary: 'Download invoices for a date range into a directory',
+    usage:
+      'open-nav pull --out <dir> --from YYYY-MM-DD --to YYYY-MM-DD [--direction inbound|outbound] [--delay ms]',
+    needsCredentials: true,
+    options: [
+      { flag: '--out', description: 'Directory to write invoices into (required)' },
+      { flag: '--from', description: 'First issue date, inclusive' },
+      { flag: '--to', description: 'Last issue date, inclusive' },
+      { flag: '--direction', description: 'inbound (default) or outbound' },
+      { flag: '--delay', description: 'Pause between requests in ms (default 250)' },
+      { flag: '--refresh', description: 'Re-download invoices already on disk' },
+    ],
+    async run(_positionals, flags, context) {
+      const out = flags['out'] ? String(flags['out']) : undefined;
+      const from = flags['from'] ? String(flags['from']) : undefined;
+      const to = flags['to'] ? String(flags['to']) : undefined;
+      if (!out) throw new UsageError('--out <dir> is required');
+      if (!from || !to) throw new UsageError('--from and --to are required (YYYY-MM-DD)');
+
+      const requested = direction(flags, 'INBOUND');
+      const delayMs = flags['delay'] ? Number(flags['delay']) : undefined;
+      if (delayMs !== undefined && (!Number.isFinite(delayMs) || delayMs < 0)) {
+        throw new UsageError('--delay must be a non-negative number of milliseconds');
+      }
+
+      // NAV caps a digest query at 35 days, so a longer range is split.
+      // Reporting that up front explains why one command makes many requests.
+      const windows = chunkDateRange(from, to);
+      const navClient = client(context);
+      const exists = context.fileExists ?? existsSync;
+
+      const downloaded: Array<{ invoiceNumber: string; issueDate: string; file: string }> = [];
+      const skipped: string[] = [];
+
+      for await (const entry of iterateInvoices(navClient, {
+        direction: requested,
+        dateFrom: from,
+        dateTo: to,
+        ...(delayMs !== undefined ? { delayMs } : {}),
+      })) {
+        // Grouped by month, because a year of invoices in one directory is
+        // unusable, and named so a re-run can skip what it already has.
+        const relative = join(
+          requested.toLowerCase(),
+          entry.digest.invoiceIssueDate.slice(0, 7),
+          `${safeName(entry.digest.invoiceNumber)}.xml`,
+        );
+        const target = join(out, relative);
+
+        if (flags['refresh'] !== true && exists(target)) {
+          skipped.push(entry.digest.invoiceNumber);
+          continue;
+        }
+
+        writeOutput(target, entry.xml, context);
+        downloaded.push({
+          invoiceNumber: entry.digest.invoiceNumber,
+          issueDate: entry.digest.invoiceIssueDate,
+          file: relative,
+        });
+      }
+
+      const index = {
+        direction: requested,
+        dateFrom: from,
+        dateTo: to,
+        windows,
+        downloaded,
+        skipped,
+      };
+      writeOutput(join(out, 'index.json'), `${JSON.stringify(index, null, 2)}\n`, context);
+
+      const data = {
+        out,
+        direction: requested,
+        windows: windows.length,
+        downloaded: downloaded.length,
+        skipped: skipped.length,
+      };
+      writeResult(context.writer, context.format, 'pull', data, () => [
+        `Downloaded ${downloaded.length} invoice(s) to ${out}.`,
+        ...(skipped.length > 0 ? [`Skipped ${skipped.length} already present.`] : []),
+        `Queried ${windows.length} window(s) of at most ${MAX_QUERY_DAYS} days.`,
       ]);
       return EXIT.ok;
     },

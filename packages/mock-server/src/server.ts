@@ -1,6 +1,6 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { parseDocument } from '@open-nav/core';
+import { encodeInvoiceData, parseDocument, type InvoiceData } from '@open-nav/core';
 import {
   HANDLERS,
   MockError,
@@ -13,6 +13,13 @@ import { createState, type MockState, type MockTaxpayer } from './state.js';
 export interface MockServerOptions {
   /** Credentials the mock accepts. Anything else is INVALID_SECURITY_USER. */
   credentials: MockCredentials;
+  /**
+   * Invoices issued *to* this taxpayer, answered by an INBOUND query.
+   *
+   * Submitting an invoice makes it outbound; there is no way to receive one,
+   * so inbound invoices are seeded here.
+   */
+  inboundInvoices?: InvoiceData[];
   /** Taxpayers `queryTaxpayer` knows about. */
   taxpayers?: MockTaxpayer[];
   /** Port to listen on. 0, the default, picks a free one. */
@@ -52,6 +59,7 @@ export interface MockServer {
  */
 export async function startMockServer(options: MockServerOptions): Promise<MockServer> {
   const state = createState(options.taxpayers ?? []);
+  seedInbound(state, options.inboundInvoices ?? [], options.now ?? (() => new Date()));
   const config: HandlerConfig = {
     credentials: options.credentials,
     pollsBeforeDone: options.pollsBeforeDone ?? 0,
@@ -93,6 +101,28 @@ export async function startMockServer(options: MockServerOptions): Promise<MockS
         server.close((error) => (error ? reject(error) : resolve()));
       }),
   };
+}
+
+/** Store seeded invoices as if they had been received. */
+function seedInbound(state: MockState, invoices: InvoiceData[], now: () => Date): void {
+  for (const [index, invoice] of invoices.entries()) {
+    const head = invoice.invoiceMain.invoice?.invoiceHead;
+    state.inbound.set(invoice.invoiceNumber, {
+      invoiceNumber: invoice.invoiceNumber,
+      operation: 'CREATE',
+      supplierTaxNumber: head?.supplierInfo.supplierTaxNumber.taxpayerId ?? '',
+      ...(head?.customerInfo?.customerVatData?.customerTaxNumber?.taxpayerId
+        ? { customerTaxNumber: head.customerInfo.customerVatData.customerTaxNumber.taxpayerId }
+        : {}),
+      issueDate: invoice.invoiceIssueDate,
+      base64: encodeInvoiceData(invoice),
+      compressed: false,
+      invoice,
+      transactionId: `MOCKIN${(index + 1).toString().padStart(6, '0')}`,
+      index: index + 1,
+      insDate: now().toISOString(),
+    });
+  }
 }
 
 function dispatch(

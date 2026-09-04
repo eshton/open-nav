@@ -9,6 +9,8 @@ import type { InvoiceData, InvoiceStatusType } from '@open-nav/core';
 export interface MockState {
   /** Invoices accepted, keyed by invoice number. */
   invoices: Map<string, StoredInvoice>;
+  /** Invoices issued *to* this taxpayer, seeded by the test. */
+  inbound: Map<string, StoredInvoice>;
   /** Transactions, keyed by transaction id. */
   transactions: Map<string, StoredTransaction>;
   /** Every `requestId` seen, since NAV rejects a replayed one. */
@@ -68,6 +70,7 @@ export interface MockTaxpayer {
 export function createState(taxpayers: MockTaxpayer[] = []): MockState {
   return {
     invoices: new Map(),
+    inbound: new Map(),
     transactions: new Map(),
     requestIds: new Set(),
     tokens: new Map(),

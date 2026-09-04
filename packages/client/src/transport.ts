@@ -46,11 +46,13 @@ export async function postXml(
   const url = `${baseUrl.replace(/\/+$/, '')}/${operation}`;
 
   let lastError: unknown;
+  let retryAfterMs: number | undefined;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     if (attempt > 0) {
       // 500ms, 1s, 2s ... NAV rate limits per taxpayer, so backing off is
-      // both polite and necessary.
-      await delay(500 * 2 ** (attempt - 1));
+      // both polite and necessary. A Retry-After header overrides the curve.
+      await delay(retryAfterMs ?? 500 * 2 ** (attempt - 1));
+      retryAfterMs = undefined;
     }
 
     let response: Response;
@@ -81,7 +83,17 @@ export async function postXml(
     }
 
     const error = toApiError(body, response.status);
-    // 4xx is a decision by NAV and will not change on retry.
+
+    // 429 and 503 are "later, not never": back off for as long as NAV asks.
+    // A bulk download makes one request per invoice, so this is the difference
+    // between a pull that finishes and one that dies a third of the way in.
+    if (response.status === 429 || response.status === 503) {
+      lastError = error;
+      retryAfterMs = parseRetryAfter(response.headers.get('retry-after'));
+      continue;
+    }
+
+    // Any other 4xx is a decision by NAV and will not change on retry.
     if (response.status < 500 || response.status === 501) throw error;
     lastError = error;
   }
@@ -168,3 +180,23 @@ async function withTimeout<T>(
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+/**
+ * Read a `Retry-After` header, which may be seconds or an HTTP date.
+ *
+ * Capped, because a header asking us to wait an hour would hang a download
+ * that the caller would rather see fail.
+ */
+export function parseRetryAfter(value: string | null, now = Date.now()): number | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+
+  if (/^\d+$/.test(trimmed)) {
+    return Math.min(Number(trimmed) * 1000, MAX_RETRY_AFTER_MS);
+  }
+  const timestamp = Date.parse(trimmed);
+  if (Number.isNaN(timestamp)) return undefined;
+  return Math.min(Math.max(timestamp - now, 0), MAX_RETRY_AFTER_MS);
+}
+
+const MAX_RETRY_AFTER_MS = 60_000;
