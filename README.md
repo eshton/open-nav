@@ -72,6 +72,7 @@ A library should absorb all four. That is the entire premise of this project.
 | `packages/invoicing`   | Printable invoice documents and the NGM data export                    |
 | `packages/mock-server` | A local stand-in for the service, for testing without credentials      |
 | `packages/cli`         | `open-nav` command line tool, built for scripts and agents             |
+| `packages/mcp`         | MCP server, so an AI agent can use all of the above                    |
 | `packages/codegen`     | Generates the types, schema metadata and fault catalogue from the XSDs |
 | `schemas/`             | Official NAV XSDs and message catalogues, vendored verbatim            |
 | `conformance/`         | NAV's own 41 sample documents, used as the golden test corpus          |
@@ -195,6 +196,22 @@ for the online invoice data service instead of the decree's own Annex 3, so
 the export is produced in `invoiceData.xsd` — the schema already generated,
 validated and round-tripped here. If an auditor asks for the Annex 3
 structure specifically, this is not it.
+
+## For an AI agent
+
+[`packages/mcp`](packages/mcp/README.md) exposes all of this over MCP.
+
+```sh
+claude mcp add open-nav -- npx -y @open-nav/mcp
+```
+
+Four tools need no credentials — validate an invoice, explain a NAV fault
+code, render a document, build the data export — and five more appear once
+credentials are configured. Tools that cannot work are not registered, so an
+agent is never offered one that is guaranteed to fail; a validation failure
+comes back as a result rather than an error, because the fault list is the
+answer; and credentials are read from the environment, never taken as tool
+arguments that would pass through a transcript.
 
 ## Testing without credentials
 

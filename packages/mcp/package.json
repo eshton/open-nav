@@ -1,0 +1,47 @@
+{
+  "name": "@open-nav/mcp",
+  "version": "0.1.0",
+  "description": "MCP server exposing the Hungarian NAV Online Sz\u00e1mla invoice service to AI agents",
+  "keywords": [
+    "nav",
+    "onlineszamla",
+    "hungary",
+    "invoice",
+    "mcp",
+    "agent",
+    "ai"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "open-nav-mcp": "./dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@open-nav/client": "workspace:^",
+    "@open-nav/core": "workspace:^",
+    "@open-nav/invoicing": "workspace:^",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@open-nav/mock-server": "workspace:^"
+  }
+}

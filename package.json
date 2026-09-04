@@ -10,9 +10,9 @@
   },
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "build": "tsc -b packages/codegen packages/core packages/client packages/cli packages/mock-server packages/invoicing",
+    "build": "tsc -b packages/codegen packages/core packages/client packages/invoicing packages/cli packages/mock-server packages/mcp",
     "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo",
-    "typecheck": "tsc -b --force packages/codegen packages/core packages/client packages/cli packages/mock-server packages/invoicing",
+    "typecheck": "tsc -b --force packages/codegen packages/core packages/client packages/invoicing packages/cli packages/mock-server packages/mcp",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
