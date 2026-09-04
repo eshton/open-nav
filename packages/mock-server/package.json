@@ -1,7 +1,7 @@
 {
   "name": "@open-nav/mock-server",
   "version": "0.1.0",
-  "description": "A local stand-in for the NAV Online Számla invoice service, for testing without credentials",
+  "description": "A local stand-in for the NAV Online Sz\u00e1mla invoice service, for testing without credentials",
   "keywords": [
     "nav",
     "onlineszamla",
@@ -35,5 +35,8 @@
   },
   "dependencies": {
     "@open-nav/core": "workspace:^"
+  },
+  "devDependencies": {
+    "@open-nav/client": "workspace:^"
   }
 }

@@ -10,9 +10,9 @@
   },
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "build": "tsc -b packages/codegen packages/core packages/client packages/cli",
+    "build": "tsc -b packages/codegen packages/core packages/client packages/cli packages/mock-server",
     "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo",
-    "typecheck": "tsc -b --force packages/codegen packages/core packages/client packages/cli",
+    "typecheck": "tsc -b --force packages/codegen packages/core packages/client packages/cli packages/mock-server",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",

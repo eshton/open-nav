@@ -48,6 +48,16 @@ importers:
         specifier: ^4.5.1
         version: 4.5.7
 
+  packages/mock-server:
+    dependencies:
+      '@open-nav/core':
+        specifier: workspace:^
+        version: link:../core
+    devDependencies:
+      '@open-nav/client':
+        specifier: workspace:^
+        version: link:../client
+
 packages:
 
   '@esbuild/aix-ppc64@0.21.5':
