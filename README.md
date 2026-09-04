@@ -98,21 +98,21 @@ a round trip through this library would have been rejected by NAV.
 
 Being explicit, because it matters for anyone considering this in production:
 
-| Area                           | State                                                                                                                                      |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Cryptographic primitives       | Verified against published SHA-512 and SHA3-512 vectors                                                                                    |
-| Request signature construction | Verified against all 11 of NAV's official request samples, and re-verified end to end by an independent implementation in the mock service |
-| Schema round trip              | Verified against all 41 official NAV sample documents                                                                                      |
-| Schema validation              | Accepts all 41 official documents; every facet kind covered by tests                                                                       |
-| Business rules                 | 24 of NAV's 30 sample invoices pass with no findings; the other 6 raise only the arithmetic faults that are wrong upstream                 |
-| Summary reconciliation         | Reproduces the summaries of those same 24 samples                                                                                          |
-| Client, end to end             | The real client drives the mock service over HTTP: token exchange, batch submission, polling and every query                               |
-| Invoice document               | All 30 samples render; PDF conversion is tested against a real browser, asserting the embedded font subset that makes `ő` and `ű` correct  |
-| Document theming               | Colour, font, length and page-size values are validated; injection attempts are covered by tests                                           |
-| Data export                    | Every exported document parses back to the invoice it came from                                                                            |
-| MCP server                     | Driven by a real MCP client, and the built binary driven over stdio                                                                        |
-| Exchange token decryption      | Round-trip tested for padded and unpadded tokens; no official vector exists                                                                |
-| Live NAV test system           | **Not yet exercised** — no technical user credentials                                                                                      |
+| Area                           | State                                                                                                                                                                        |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cryptographic primitives       | Verified against published SHA-512 and SHA3-512 vectors                                                                                                                      |
+| Request signature construction | Verified against all 11 of NAV's official request samples, and re-verified end to end by an independent implementation in the mock service                                   |
+| Schema round trip              | Verified against all 41 official NAV sample documents                                                                                                                        |
+| Schema validation              | Accepts all 41 official documents; every facet kind covered by tests                                                                                                         |
+| Business rules                 | 24 of NAV's 30 sample invoices pass with no findings; the other 6 raise only the arithmetic faults that are wrong upstream                                                   |
+| Summary reconciliation         | Reproduces the summaries of those same 24 samples                                                                                                                            |
+| Client, end to end             | The real client drives the mock service over HTTP: token exchange, batch submission, polling and every query                                                                 |
+| Invoice document               | All 30 samples render as HTML and as PDF through the native engine; the PDF's own ToUnicode maps are asserted to carry `ő` and `ű`, and its text was extracted and read back |
+| Document theming               | Colour, font, length and page-size values are validated; injection attempts are covered by tests                                                                             |
+| Data export                    | Every exported document parses back to the invoice it came from                                                                                                              |
+| MCP server                     | Driven by a real MCP client, and the built binary driven over stdio                                                                                                          |
+| Exchange token decryption      | Round-trip tested for padded and unpadded tokens; no official vector exists                                                                                                  |
+| Live NAV test system           | **Not yet exercised** — no technical user credentials                                                                                                                        |
 
 ## Validating before you send
 
@@ -190,13 +190,17 @@ contact lines, footer lines, and a `customCss` escape hatch. See
 validated rather than interpolated into the stylesheet, because a theme is
 still input.
 
-The PDF is produced by driving a local browser, which `findBrowser()` locates,
-or by a converter you supply — three lines with Playwright. The reason is `ő`
-and `ű`: both are outside the encoding the PDF core fonts use, so writing the
-PDF directly would mean bundling, licensing and subsetting a font, while a
-browser already embeds the subsets it needs. The browser sandbox stays **on**
-by default, since invoice data is input, so as root you pass `--no-sandbox`
-deliberately and the error says exactly that.
+**No browser required.** `ő` and `ű` lie outside the encoding the PDF core
+fonts use, so a font must be embedded for a Hungarian invoice to spell itself.
+The default engine embeds the Roboto that pdfmake bundles — Apache-2.0, full
+Latin Extended-A — as a subset with a correct ToUnicode map, so the text stays
+searchable and the output is about a quarter the size of a browser's. Bring
+your own font with `font: { name, normal, bold }`.
+
+A `browser` engine remains available for pixel fidelity to the HTML, locating
+Chrome, Chromium or Edge itself or taking a `convert` function you supply. Its
+sandbox stays **on** by default, since invoice data is input, so as root you
+pass `--no-sandbox` deliberately.
 
 **The tax authority data export** required by decree 23/2014. (VI. 30.) NGM:
 
