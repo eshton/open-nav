@@ -23,6 +23,17 @@ function capture(): Writer & { stdout: string[]; stderr: string[] } {
   };
 }
 
+/** A 1x1 PNG, enough to prove the logo is read and inlined. */
+const LOGO = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DAAAAEAAH2FzhVAAAAAElFTkSuQmCC',
+  'base64',
+);
+
+const BINARY_FILES: Record<string, Buffer> = {
+  'logo.png': LOGO,
+  '/brand/logo.png': LOGO,
+};
+
 const FILES: Record<string, string> = {
   'good.xml': sample('belfoldi-termekertekesites.xml'),
   'bad-totals.xml': sample('termekdijas-szamla.xml'),
@@ -30,11 +41,20 @@ const FILES: Record<string, string> = {
   // The only published sample with a warning: two placeholder tax numbers
   // whose check digits do not match.
   'warns.xml': sample('belfoldi-termekertekesites-afa-csoportok-kozott.xml'),
+  'theme.json': JSON.stringify({
+    accentColor: '#0f4c81',
+    zebraRows: true,
+    issuerContact: ['+36 1 234 5678'],
+    footerLines: ['Bank: 12345678-12345678'],
+  }),
+  'themed.json': JSON.stringify({ accentColor: '#0f4c81', logoFile: 'logo.png' }),
+  'bad-theme.json': JSON.stringify({ accentColor: 'red; } body { display: none } .x {' }),
 };
 
 async function cli(argv: string[], options: { env?: Record<string, string> } = {}) {
   const writer = capture();
   const written = new Map<string, string>();
+  const binary = new Map<string, Buffer>();
   const code = await run({
     argv,
     writer,
@@ -46,11 +66,20 @@ async function cli(argv: string[], options: { env?: Record<string, string> } = {
       return contents;
     },
     writeFile: (path, contents) => written.set(path, contents),
+    writeBinaryFile: (path, contents) => binary.set(path, contents),
+    readBinaryFile: (path) => {
+      // loadTheme resolves logoFile against the theme file's directory, so the
+      // path arriving here is absolute; match on the file name.
+      const contents = BINARY_FILES[path] ?? BINARY_FILES[path.split('/').pop() ?? ''];
+      if (contents === undefined) throw new Error(`ENOENT: ${path}`);
+      return contents;
+    },
   });
   return {
     code,
     writer,
     written,
+    binary,
     json: () => JSON.parse(writer.stdout.join('\n')) as Record<string, unknown>,
   };
 }
@@ -360,5 +389,91 @@ describe('export', () => {
       invoices: Array<{ sha256: string }>;
     };
     expect(manifest.invoices[0]?.sha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+describe('render styling', () => {
+  it('applies a theme file', async () => {
+    const { code, written } = await cli([
+      'render',
+      'good.xml',
+      '--out',
+      'a.html',
+      '--theme',
+      'theme.json',
+    ]);
+    expect(code).toBe(EXIT.ok);
+    const html = written.get('a.html')!;
+    expect(html).toContain('--accent: #0f4c81');
+    expect(html).toContain('nth-child(even)');
+    expect(html).toContain('+36 1 234 5678');
+    expect(html).toContain('Bank: 12345678-12345678');
+  });
+
+  it('inlines a logo named in the theme, relative to the theme file', async () => {
+    const { code, written } = await cli([
+      'render',
+      'good.xml',
+      '--out',
+      'a.html',
+      '--theme',
+      'themed.json',
+    ]);
+    expect(code).toBe(EXIT.ok);
+    expect(written.get('a.html')).toContain('data:image/png;base64,');
+  });
+
+  it('lets --logo override the theme', async () => {
+    const { written } = await cli([
+      'render',
+      'good.xml',
+      '--out',
+      'a.html',
+      '--theme',
+      'theme.json',
+      '--logo',
+      'logo.png',
+    ]);
+    const html = written.get('a.html')!;
+    expect(html).toContain('data:image/png;base64,');
+    expect(html).toContain('--accent: #0f4c81');
+  });
+
+  it('treats a malformed theme as a usage error, not a crash', async () => {
+    const { code, json } = await cli(['render', 'good.xml', '--theme', 'bad-theme.json']);
+    expect(code).toBe(EXIT.usage);
+    expect((json()['error'] as { code: string }).code).toBe('THEME');
+  });
+});
+
+describe('render to PDF', () => {
+  it('writes a PDF, and the HTML too when both are asked for', async () => {
+    const { code, binary, written } = await cli([
+      'render',
+      'good.xml',
+      '--pdf',
+      'out/invoice.pdf',
+      '--out',
+      'out/invoice.html',
+      '--no-sandbox',
+    ]);
+    // Skip where no browser exists; the invoicing package covers conversion.
+    if (code === EXIT.unavailable) return;
+    expect(code).toBe(EXIT.ok);
+    expect(binary.get('out/invoice.pdf')?.subarray(0, 5).toString()).toBe('%PDF-');
+    expect(written.get('out/invoice.html')).toContain('<!doctype html>');
+  }, 60_000);
+
+  it('reports a missing browser as unavailable rather than as a failure', async () => {
+    const { code, json } = await cli([
+      'render',
+      'good.xml',
+      '--pdf',
+      'a.pdf',
+      '--browser',
+      '/nonexistent/chrome',
+    ]);
+    expect(code).toBe(EXIT.unavailable);
+    expect((json()['error'] as { code: string }).code).toBe('PDF_CONVERSION');
   });
 });

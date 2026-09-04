@@ -11,7 +11,14 @@ import {
   type InvoiceValidationIssue,
 } from '@open-nav/core';
 import { NavClient, waitForTransaction } from '@open-nav/client';
-import { createDataExport, renderInvoiceHtml } from '@open-nav/invoicing';
+import {
+  createDataExport,
+  embedImage,
+  loadTheme,
+  renderInvoiceHtml,
+  renderInvoicePdf,
+  type InvoiceTheme,
+} from '@open-nav/invoicing';
 import { EXIT, UsageError, type ExitCode } from './errors.js';
 import { describeConfig, loadConfig, loadEnvironment, type LoadOptions } from './config.js';
 import { renderFields, renderIssues, writeResult, type Format, type Writer } from './output.js';
@@ -24,6 +31,10 @@ export interface CommandContext {
   readFile?: (path: string) => string;
   /** Write a file, creating parent directories. Injectable for tests. */
   writeFile?: (path: string, contents: string) => void;
+  /** Write binary output, for PDFs. */
+  writeBinaryFile?: (path: string, contents: Buffer) => void;
+  /** Read binary input, for logos. */
+  readBinaryFile?: (path: string) => Buffer;
 }
 
 export interface CommandDefinition {
@@ -62,6 +73,43 @@ function writeOutput(path: string, contents: string, context: CommandContext): v
   }
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, contents, 'utf8');
+}
+
+function writeBinaryOutput(path: string, contents: Buffer, context: CommandContext): void {
+  if (context.writeBinaryFile) {
+    context.writeBinaryFile(path, contents);
+    return;
+  }
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, contents);
+}
+
+/**
+ * Build the theme from `--theme` and `--logo`.
+ *
+ * `--logo` wins, so one branded theme can be shared and a single document
+ * still overridden without editing it.
+ */
+function resolveThemeFlags(
+  flags: Record<string, string | boolean | undefined>,
+  context: CommandContext,
+): InvoiceTheme | undefined {
+  const themePath = flags['theme'] ? String(flags['theme']) : undefined;
+  const logoPath = flags['logo'] ? String(flags['logo']) : undefined;
+  if (!themePath && !logoPath) return undefined;
+
+  const theme: InvoiceTheme = themePath
+    ? loadTheme(themePath, {
+        ...(context.readFile ? { readFile: context.readFile } : {}),
+        ...(context.readBinaryFile ? { readBinary: context.readBinaryFile } : {}),
+      })
+    : {};
+
+  if (logoPath) {
+    const read = context.readBinaryFile ?? ((target: string) => readFileSync(target));
+    theme.logo = { ...theme.logo, src: embedImage(logoPath, read(logoPath)) };
+  }
+  return theme;
 }
 
 /** Read an InvoiceData document, failing clearly if it is something else. */
@@ -504,31 +552,66 @@ export const COMMANDS: CommandDefinition[] = [
 
   {
     name: 'render',
-    summary: 'Render an invoice as a printable HTML document',
-    usage: 'open-nav render <file.xml> [--out file.html] [--language hu|en] [--note text]',
+    summary: 'Render an invoice as a printable HTML or PDF document',
+    usage:
+      'open-nav render <file.xml> [--pdf file.pdf] [--out file.html] [--theme theme.json] [--logo logo.png] [--language hu|en] [--note text]',
     needsCredentials: false,
     options: [
-      { flag: '--out', description: 'Write to this file instead of standard output' },
+      { flag: '--pdf', description: 'Write a PDF, converting with a local browser' },
+      { flag: '--out', description: 'Write HTML here instead of standard output' },
+      { flag: '--theme', description: 'JSON theme: logo, colours, fonts, page setup, footer' },
+      { flag: '--logo', description: 'Image to inline as the logo, overriding the theme' },
       { flag: '--language', description: 'hu (default) or en' },
       { flag: '--note', description: 'Extra note printed under the totals' },
+      { flag: '--browser', description: 'Browser executable for PDF conversion' },
+      { flag: '--no-sandbox', description: 'Disable the browser sandbox (needed as root)' },
     ],
     async run(positionals, flags, context) {
       const path = requirePositional(positionals, 0, 'file');
       const invoice = readInvoice(path, context);
 
-      const language = flags['language'] ? String(flags['language']) : 'hu';
-      if (language !== 'hu' && language !== 'en') {
+      const requested = flags['language'] ? String(flags['language']) : 'hu';
+      if (requested !== 'hu' && requested !== 'en') {
         throw new UsageError('--language must be hu or en');
       }
+      const language: 'hu' | 'en' = requested;
 
-      const html = renderInvoiceHtml(invoice, {
+      const theme = resolveThemeFlags(flags, context);
+      const renderOptions = {
         language,
+        ...(theme ? { theme } : {}),
         ...(flags['note'] ? { note: String(flags['note']) } : {}),
-      });
+      };
 
+      const pdfPath = flags['pdf'] ? String(flags['pdf']) : undefined;
       const out = flags['out'] ? String(flags['out']) : undefined;
+
+      if (pdfPath) {
+        const pdf = await renderInvoicePdf(invoice, {
+          ...renderOptions,
+          ...(flags['browser'] ? { browserPath: String(flags['browser']) } : {}),
+          ...(flags['no-sandbox'] === true ? { sandbox: false } : {}),
+        });
+        writeBinaryOutput(pdfPath, pdf, context);
+        if (out) writeOutput(out, renderInvoiceHtml(invoice, renderOptions), context);
+
+        const data = {
+          file: path,
+          pdf: pdfPath,
+          bytes: pdf.length,
+          language,
+          ...(out ? { out } : {}),
+        };
+        writeResult(context.writer, context.format, 'render', data, () => [
+          `Wrote ${pdfPath} (${pdf.length} bytes).`,
+          ...(out ? [`Wrote ${out}.`] : []),
+        ]);
+        return EXIT.ok;
+      }
+
+      const html = renderInvoiceHtml(invoice, renderOptions);
       if (!out) {
-        // Straight to stdout, so it can be piped into a PDF converter.
+        // Straight to stdout, so it can be piped.
         context.writer.out(html);
         return EXIT.ok;
       }
@@ -537,7 +620,7 @@ export const COMMANDS: CommandDefinition[] = [
       const data = { file: path, out, bytes: html.length, language };
       writeResult(context.writer, context.format, 'render', data, () => [
         `Wrote ${out} (${html.length} bytes).`,
-        'To PDF:  chromium --headless --print-to-pdf=invoice.pdf ' + out,
+        `For a PDF instead:  open-nav render ${path} --pdf invoice.pdf`,
       ]);
       return EXIT.ok;
     },

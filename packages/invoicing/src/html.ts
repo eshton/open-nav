@@ -9,6 +9,7 @@ import {
 } from './format.js';
 import { documentTitle, label, paymentMethodLabel, unitLabel } from './labels.js';
 import { deriveMarkings } from './markings.js';
+import { buildStyles, resolveTheme, type InvoiceTheme, type ResolvedTheme } from './theme.js';
 
 export interface RenderOptions {
   /** Document language. Hungarian by default, as the law prescribes. */
@@ -16,11 +17,19 @@ export interface RenderOptions {
   /** Extra note printed under the totals, e.g. payment instructions. */
   note?: string;
   /**
+   * Branding and layout: logo, colours, fonts, page setup, footer.
+   *
+   * See {@link InvoiceTheme}. Anything omitted falls back to a restrained
+   * default that prints well in black and white.
+   */
+  theme?: InvoiceTheme;
+  /**
    * State that the document was rendered from reported data.
    *
    * On by default. An invoice's legal original is whatever the issuer issued;
    * this rendering is a faithful presentation of the reported data, and
-   * saying so avoids passing it off as something it is not.
+   * saying so avoids passing it off as something it is not. Can also be set
+   * through the theme.
    */
   provenanceNote?: boolean;
 }
@@ -43,12 +52,13 @@ export interface RenderOptions {
  */
 export function renderInvoiceHtml(document: InvoiceData, options: RenderOptions = {}): string {
   const language = options.language ?? 'hu';
+  const theme = resolveTheme(options.theme);
   const invoices = document.invoiceMain.invoice
     ? [document.invoiceMain.invoice]
     : (document.invoiceMain.batchInvoice ?? []).map((entry) => entry.invoice);
 
   const body = invoices
-    .map((invoice) => renderInvoice(document, invoice, language, options))
+    .map((invoice) => renderInvoice(document, invoice, language, options, theme))
     .join('\n<div class="page-break"></div>\n');
 
   return `<!doctype html>
@@ -56,7 +66,7 @@ export function renderInvoiceHtml(document: InvoiceData, options: RenderOptions 
 <head>
 <meta charset="utf-8">
 <title>${escapeHtml(document.invoiceNumber)}</title>
-${STYLES}
+${buildStyles(theme)}
 </head>
 <body>
 ${body}
@@ -65,79 +75,12 @@ ${body}
 `;
 }
 
-const STYLES = `<style>
-  @page { size: A4; margin: 16mm 14mm; }
-  :root {
-    --ink: #16181d;
-    --muted: #5b6270;
-    --rule: #c9cdd6;
-    --panel: #f4f5f8;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    color: var(--ink);
-    font: 10pt/1.45 "Helvetica Neue", Arial, "Liberation Sans", sans-serif;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .invoice { max-width: 190mm; margin: 0 auto; padding: 8mm 0; }
-  .page-break { page-break-after: always; }
-
-  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12mm; }
-  h1 { margin: 0; font-size: 20pt; letter-spacing: 0.08em; font-weight: 700; }
-  .subtitle { color: var(--muted); font-size: 9pt; margin-top: 2mm; }
-  .meta { text-align: right; font-size: 9.5pt; min-width: 64mm; }
-  .meta div { margin-bottom: 1mm; }
-  /* Keep a date or an invoice number from wrapping away from its label. */
-  .meta .value { font-weight: 700; white-space: nowrap; }
-
-  .parties { display: flex; gap: 6mm; margin: 7mm 0; }
-  .party { flex: 1; border: 1px solid var(--rule); border-radius: 2mm; padding: 4mm; }
-  .party h2 {
-    margin: 0 0 2mm; font-size: 8pt; text-transform: uppercase;
-    letter-spacing: 0.1em; color: var(--muted); font-weight: 700;
-  }
-  .party .name { font-weight: 700; font-size: 11pt; margin-bottom: 1mm; }
-  .party .address { font-size: 9pt; margin-bottom: 1.5mm; }
-  .party dl { margin: 2mm 0 0; display: grid; grid-template-columns: auto 1fr; gap: 0.6mm 3mm; font-size: 9pt; }
-  .party dt { color: var(--muted); }
-  .party dd { margin: 0; }
-
-  table { width: 100%; border-collapse: collapse; font-size: 9pt; }
-  thead th {
-    text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.06em;
-    color: var(--muted); border-bottom: 1px solid var(--rule); padding: 2mm 1.5mm;
-  }
-  tbody td { padding: 2mm 1.5mm; border-bottom: 1px solid #e7e9ee; vertical-align: top; }
-  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  tbody tr:last-child td { border-bottom: 1px solid var(--rule); }
-
-  .totals { display: flex; justify-content: flex-end; margin-top: 5mm; }
-  .totals table { width: auto; min-width: 80mm; }
-  .totals td { padding: 1.5mm 2mm; border: none; }
-  .totals .grand td {
-    border-top: 1.5px solid var(--ink); font-weight: 700; font-size: 11.5pt; padding-top: 2.5mm;
-  }
-
-  .vat-summary { margin-top: 6mm; }
-  .vat-summary h2, .markings h2 {
-    font-size: 8pt; text-transform: uppercase; letter-spacing: 0.1em;
-    color: var(--muted); margin: 0 0 2mm; font-weight: 700;
-  }
-  .markings { margin-top: 6mm; background: var(--panel); border-radius: 2mm; padding: 4mm; }
-  .markings ul { margin: 0; padding-left: 4mm; }
-  .markings li { margin-bottom: 1mm; }
-  .markings .reference { color: var(--muted); font-size: 8.5pt; }
-  .note { margin-top: 5mm; font-size: 9pt; }
-  footer { margin-top: 8mm; color: var(--muted); font-size: 8pt; border-top: 1px solid var(--rule); padding-top: 2mm; }
-</style>`;
-
 function renderInvoice(
   document: InvoiceData,
   invoice: InvoiceType,
   language: DocumentLanguage,
   options: RenderOptions,
+  theme: ResolvedTheme,
 ): string {
   const detail = invoice.invoiceHead.invoiceDetail;
   const currency = detail.currencyCode;
@@ -181,11 +124,19 @@ function renderInvoice(
     ]);
   }
 
+  const logo = theme.logo
+    ? `<img class="logo" src="${escapeHtml(theme.logo.src)}" alt="${escapeHtml(theme.logo.alt ?? invoice.invoiceHead.supplierInfo.supplierName)}"` +
+      `${theme.logo.width ? ` style="width:${escapeHtml(theme.logo.width)}"` : ''}>`
+    : '';
+
   return `<article class="invoice">
   <header>
-    <div>
-      <h1>${escapeHtml(documentTitle(detail.invoiceCategory, isModification, language))}</h1>
-      ${markings.length > 0 ? `<div class="subtitle">${markings.map((marking) => escapeHtml(marking.text)).join(' · ')}</div>` : ''}
+    <div class="brand">
+      ${logo}
+      <div>
+        <h1>${escapeHtml(documentTitle(detail.invoiceCategory, isModification, language))}</h1>
+        ${markings.length > 0 ? `<div class="subtitle">${markings.map((marking) => escapeHtml(marking.text)).join(' · ')}</div>` : ''}
+      </div>
     </div>
     <div class="meta">
       ${metaRows
@@ -198,8 +149,8 @@ function renderInvoice(
   </header>
 
   <section class="parties">
-    ${renderParty(label('supplier', language), supplierFields(invoice, language), language)}
-    ${renderParty(label('customer', language), customerFields(invoice, language), language)}
+    ${renderParty(label('supplier', language), supplierFields(invoice, language), theme.issuerContact)}
+    ${renderParty(label('customer', language), customerFields(invoice, language), [])}
   </section>
 
   ${renderLines(lines, currency, language)}
@@ -207,18 +158,14 @@ function renderInvoice(
   ${renderVatSummary(invoice, currency, language)}
   ${renderMarkings(markings, language)}
   ${options.note ? `<div class="note">${escapeHtml(options.note)}</div>` : ''}
-  ${
-    options.provenanceNote === false
-      ? ''
-      : `<footer>${escapeHtml(label('notReported', language))}</footer>`
-  }
+  ${renderFooter(theme, options, language)}
 </article>`;
 }
 
 function renderParty(
   heading: string,
   fields: { name: string; address: string; rows: Array<[string, string]> },
-  _language: DocumentLanguage,
+  contact: string[],
 ): string {
   return `<div class="party">
       <h2>${escapeHtml(heading)}</h2>
@@ -229,7 +176,32 @@ function renderParty(
           .map(([key, value]) => `<dt>${escapeHtml(key)}</dt><dd>${escapeHtml(value)}</dd>`)
           .join('\n        ')}
       </dl>
+      ${
+        contact.length > 0
+          ? `<div class="contact">${contact.map((line) => escapeHtml(line)).join('<br>')}</div>`
+          : ''
+      }
     </div>`;
+}
+
+/**
+ * The footer carries the theme's own lines plus the provenance note.
+ *
+ * `provenanceNote` can be set on either the options or the theme; the option
+ * wins, so a single document can drop it without editing shared branding.
+ */
+function renderFooter(
+  theme: ResolvedTheme,
+  options: RenderOptions,
+  language: DocumentLanguage,
+): string {
+  const showProvenance = options.provenanceNote ?? theme.provenanceNote;
+  const lines = [
+    ...theme.footerLines.map((line) => escapeHtml(line)),
+    ...(showProvenance ? [escapeHtml(label('notReported', language))] : []),
+  ];
+  if (lines.length === 0) return '';
+  return `<footer>${lines.map((line) => `<div>${line}</div>`).join('')}</footer>`;
 }
 
 function formatAddress(address: AddressType | undefined): string {

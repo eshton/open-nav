@@ -1,0 +1,28 @@
+{
+  "$comment": "Copy, edit, and pass with: open-nav render invoice.xml --pdf invoice.pdf --theme invoice-theme.json",
+
+  "accentColor": "#0f4c81",
+  "inkColor": "#16181d",
+  "mutedColor": "#5a6472",
+  "panelColor": "#eef3f8",
+  "borderColor": "#cfd8e3",
+
+  "fontFamily": "\"DejaVu Sans\", \"Liberation Sans\", Arial, sans-serif",
+  "baseFontSize": "10pt",
+
+  "pageSize": "A4",
+  "pageMargin": "14mm 13mm",
+
+  "logoFile": "logo.svg",
+  "logo": { "width": "46mm", "alt": "Armin & Felix Kft." },
+
+  "zebraRows": true,
+
+  "issuerContact": ["+36 1 234 5678", "hello@example.com", "example.com"],
+  "footerLines": [
+    "Fizetés a megjelölt bankszámlaszámra, a fizetési határidőig.",
+    "Cégjegyzékszám: 01-09-123456"
+  ],
+
+  "customCss": ".invoice h1 { letter-spacing: 0.12em; }"
+}

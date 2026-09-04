@@ -107,7 +107,8 @@ Being explicit, because it matters for anyone considering this in production:
 | Business rules                 | 24 of NAV's 30 sample invoices pass with no findings; the other 6 raise only the arithmetic faults that are wrong upstream                 |
 | Summary reconciliation         | Reproduces the summaries of those same 24 samples                                                                                          |
 | Client, end to end             | The real client drives the mock service over HTTP: token exchange, batch submission, polling and every query                               |
-| Invoice document               | All 30 samples render; the output was converted to PDF and the Hungarian typography checked                                                |
+| Invoice document               | All 30 samples render; PDF conversion is tested against a real browser, asserting the embedded font subset that makes `ő` and `ű` correct  |
+| Document theming               | Colour, font, length and page-size values are validated; injection attempts are covered by tests                                           |
 | Data export                    | Every exported document parses back to the invoice it came from                                                                            |
 | MCP server                     | Driven by a real MCP client, and the built binary driven over stdio                                                                        |
 | Exchange token decryption      | Round-trip tested for padded and unpadded tokens; no official vector exists                                                                |
@@ -174,19 +175,28 @@ discover it. `validate` and `fault` need no credentials at all. See
 Two things an invoicing program must be able to produce, in
 [`packages/invoicing`](packages/invoicing/README.md).
 
-**A printable invoice**, with the phrases the VAT Act requires derived from
-the data rather than left to a template — _fordított adózás_, the legal ground
-of an exemption, which margin scheme applies — each printed with the provision
-it comes from.
+**A printable invoice, as PDF or HTML**, with the phrases the VAT Act requires
+derived from the data rather than left to a template — _fordított adózás_, the
+legal ground of an exemption, which margin scheme applies — each printed with
+the provision it comes from.
 
 ```sh
-open-nav render invoice.xml --out invoice.html
-chromium --headless --print-to-pdf=invoice.pdf invoice.html
+open-nav render invoice.xml --pdf invoice.pdf --theme theme.json
 ```
 
-HTML rather than PDF directly, because `ő` and `ű` are outside the encoding
-the PDF core fonts use: a dependency-free PDF writer cannot spell Hungarian
-without bundling a licensed font, while a browser embeds the subsets it needs.
+Branding is a JSON theme: logo, palette, fonts, page size and margins, issuer
+contact lines, footer lines, and a `customCss` escape hatch. See
+[`examples/invoice-theme.json`](examples/invoice-theme.json). Theme values are
+validated rather than interpolated into the stylesheet, because a theme is
+still input.
+
+The PDF is produced by driving a local browser, which `findBrowser()` locates,
+or by a converter you supply — three lines with Playwright. The reason is `ő`
+and `ű`: both are outside the encoding the PDF core fonts use, so writing the
+PDF directly would mean bundling, licensing and subsetting a font, while a
+browser already embeds the subsets it needs. The browser sandbox stays **on**
+by default, since invoice data is input, so as root you pass `--no-sandbox`
+deliberately and the error says exactly that.
 
 **The tax authority data export** required by decree 23/2014. (VI. 30.) NGM:
 

@@ -12,7 +12,11 @@ export const EXIT = {
   invalid: 3,
   /** NAV rejected the request or the invoices in it. */
   rejected: 4,
-  /** The request never reached a verdict: network, timeout, or still pending. */
+  /**
+   * The work could not be completed because something it depends on was
+   * unavailable: the network, a NAV verdict that has not arrived, or a
+   * browser to convert a document with.
+   */
   unavailable: 5,
 } as const;
 

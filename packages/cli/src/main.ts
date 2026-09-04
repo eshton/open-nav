@@ -1,5 +1,6 @@
 import { parseArgs } from 'node:util';
 import { NavApiError, NavTransportError, NavValidationError } from '@open-nav/core';
+import { PdfConversionError, ThemeError } from '@open-nav/invoicing';
 import { COMMANDS, describeCommands, findCommand, type CommandContext } from './commands.js';
 import { ENV_VARS } from './config.js';
 import { EXIT, UsageError, type ExitCode } from './errors.js';
@@ -14,6 +15,8 @@ export interface RunOptions {
   cwd?: string;
   readFile?: (path: string) => string;
   writeFile?: (path: string, contents: string) => void;
+  writeBinaryFile?: (path: string, contents: Buffer) => void;
+  readBinaryFile?: (path: string) => Buffer;
 }
 
 const GLOBAL_OPTIONS = {
@@ -56,6 +59,11 @@ export async function run(options: RunOptions): Promise<ExitCode> {
         'skip-validation': { type: 'boolean' },
         out: { type: 'string' },
         note: { type: 'string' },
+        pdf: { type: 'string' },
+        theme: { type: 'string' },
+        logo: { type: 'string' },
+        browser: { type: 'string' },
+        'no-sandbox': { type: 'boolean' },
         'number-from': { type: 'string' },
         'number-to': { type: 'string' },
         'warnings-as-errors': { type: 'boolean' },
@@ -110,6 +118,8 @@ export async function run(options: RunOptions): Promise<ExitCode> {
     },
     ...(options.readFile ? { readFile: options.readFile } : {}),
     ...(options.writeFile ? { writeFile: options.writeFile } : {}),
+    ...(options.writeBinaryFile ? { writeBinaryFile: options.writeBinaryFile } : {}),
+    ...(options.readBinaryFile ? { readBinaryFile: options.readBinaryFile } : {}),
   };
 
   try {
@@ -146,6 +156,16 @@ function reportError(writer: Writer, format: Format, command: string, error: unk
   }
   if (error instanceof NavTransportError) {
     writeError(writer, format, command, { message: error.message, code: 'UNAVAILABLE' });
+    return EXIT.unavailable;
+  }
+  if (error instanceof ThemeError) {
+    // A malformed theme is a configuration mistake, like a bad flag.
+    writeError(writer, format, command, { message: error.message, code: 'THEME' });
+    return EXIT.usage;
+  }
+  if (error instanceof PdfConversionError) {
+    // Nothing wrong with the document; the machine lacks a browser.
+    writeError(writer, format, command, { message: error.message, code: 'PDF_CONVERSION' });
     return EXIT.unavailable;
   }
   writeError(writer, format, command, { message: (error as Error).message ?? String(error) });

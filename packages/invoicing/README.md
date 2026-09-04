@@ -5,24 +5,86 @@ able to produce: a printable invoice, and the tax authority data export.
 
 ## The printable invoice
 
-```ts
-import { renderInvoiceHtml } from '@open-nav/invoicing';
-
-const html = renderInvoiceHtml(invoice, { language: 'hu' });
-```
-
 ```sh
-open-nav render invoice.xml --out invoice.html
-chromium --headless --print-to-pdf=invoice.pdf invoice.html
+open-nav render invoice.xml --pdf invoice.pdf --theme theme.json
 ```
 
-**Why HTML and not PDF directly.** A Hungarian invoice needs `ő` and `ű`.
-Both are outside WinAnsi, the encoding the PDF core fonts use, so a
-dependency-free PDF writer cannot spell the language without bundling and
-licensing a font. HTML gets the typography right, needs nothing bundled, and
-any browser turns it into a PDF that embeds the font subsets it needs. The
-output has no external references — no fonts, scripts or images fetched — so
-it renders the same offline and archives as a single file.
+```ts
+import { renderInvoicePdf, renderInvoiceHtml, loadTheme } from '@open-nav/invoicing';
+
+const theme = loadTheme('theme.json');
+const pdf = await renderInvoicePdf(invoice, { theme }); // Buffer
+const html = renderInvoiceHtml(invoice, { theme }); // string
+```
+
+### Styling
+
+Everything visual comes from a theme, which can live in a JSON file next to
+its logo — see [`examples/invoice-theme.json`](../../examples/invoice-theme.json).
+
+| Field                                                 | Purpose                                                                |
+| ----------------------------------------------------- | ---------------------------------------------------------------------- |
+| `accentColor`                                         | Title, the grand total, the rule above it                              |
+| `inkColor`, `mutedColor`, `panelColor`, `borderColor` | The rest of the palette                                                |
+| `fontFamily`, `baseFontSize`                          | Typography; everything scales from the base size                       |
+| `pageSize`, `pageMargin`                              | `@page` setup, e.g. `A4` and `16mm 14mm`                               |
+| `logo` / `logoFile`                                   | Header logo. `logoFile` is read relative to the theme file and inlined |
+| `issuerContact`                                       | Extra lines in the supplier block: phone, email, web                   |
+| `footerLines`                                         | Footer: payment terms, company registration, bank details              |
+| `zebraRows`                                           | Tint alternate table rows                                              |
+| `provenanceNote`                                      | Whether to print the "rendered from reported data" line                |
+| `customCss`                                           | Appended after the generated stylesheet. The escape hatch              |
+
+Theme values end up inside the stylesheet, so they are **validated rather
+than interpolated**: a colour must look like a CSS colour, a font stack may
+not contain parentheses (no font name does, and allowing them would admit
+`url(...)`), and a logo must be a `data:` URI or an `http(s)` URL. A bad value
+names the field it came from.
+
+`--logo` on the command line overrides the theme's, so one branded theme can
+be shared and a single document still overridden.
+
+### How the PDF is made, and why
+
+A Hungarian invoice needs `ő` and `ű`. Both are outside WinAnsi, the encoding
+the PDF core fonts use, so a dependency-free PDF writer cannot spell the
+language without bundling, licensing and subsetting a font. A browser already
+has fonts, already subsets and embeds them, and already implements `@page` —
+so the document is rendered as HTML and converted. The tests assert
+`/FontFile2` appears in the output, which is that font subset.
+
+`findBrowser()` locates Chrome, Chromium or Edge: an explicit
+`OPEN_NAV_BROWSER`, `CHROME_PATH` or `PUPPETEER_EXECUTABLE_PATH`, then a
+Playwright install, then the usual locations, then `PATH`. It prefers a full
+build over a headless shell, which cannot print.
+
+**The sandbox stays on by default.** Invoice data is input, and the sandbox is
+what contains a malicious document. That means conversion fails when running
+as root, as in most containers — pass `sandbox: false`, or `--no-sandbox`,
+deliberately. The error says exactly that rather than quietly weakening the
+default for everyone.
+
+No browser at all? Supply your own converter:
+
+```ts
+import { chromium } from 'playwright';
+
+const convert = async (html: string) => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: 'load' });
+  const pdf = await page.pdf({ printBackground: true });
+  await browser.close();
+  return pdf;
+};
+
+const pdf = await renderInvoicePdf(invoice, { convert });
+```
+
+The HTML has no external references — no fonts, scripts or images fetched — so
+it renders the same offline and archives as a single file. Keep the logo
+inlined for that reason; a logo fetched over the network is the usual cause of
+a conversion that hangs, or a PDF that silently comes out logo-less.
 
 ### It derives the markings the law requires
 
