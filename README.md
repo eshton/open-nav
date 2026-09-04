@@ -98,17 +98,20 @@ a round trip through this library would have been rejected by NAV.
 
 Being explicit, because it matters for anyone considering this in production:
 
-| Area                           | State                                                                                                                      |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| Cryptographic primitives       | Verified against published SHA-512 and SHA3-512 vectors                                                                    |
-| Request signature construction | Verified against all 11 of NAV's official request samples, including the three-invoice batch                               |
-| Schema round trip              | Verified against all 41 official NAV sample documents                                                                      |
-| Schema validation              | Accepts all 41 official documents; every facet kind covered by tests                                                       |
-| Business rules                 | 24 of NAV's 30 sample invoices pass with no findings; the other 6 raise only the arithmetic faults that are wrong upstream |
-| Summary reconciliation         | Reproduces the summaries of those same 24 samples                                                                          |
-| Client request building        | Verified by recomputing each signature from the request actually sent                                                      |
-| Exchange token decryption      | Round-trip tested for padded and unpadded tokens; no official vector exists                                                |
-| Live NAV test system           | **Not yet exercised** — no technical user credentials                                                                      |
+| Area                           | State                                                                                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Cryptographic primitives       | Verified against published SHA-512 and SHA3-512 vectors                                                                                    |
+| Request signature construction | Verified against all 11 of NAV's official request samples, and re-verified end to end by an independent implementation in the mock service |
+| Schema round trip              | Verified against all 41 official NAV sample documents                                                                                      |
+| Schema validation              | Accepts all 41 official documents; every facet kind covered by tests                                                                       |
+| Business rules                 | 24 of NAV's 30 sample invoices pass with no findings; the other 6 raise only the arithmetic faults that are wrong upstream                 |
+| Summary reconciliation         | Reproduces the summaries of those same 24 samples                                                                                          |
+| Client, end to end             | The real client drives the mock service over HTTP: token exchange, batch submission, polling and every query                               |
+| Invoice document               | All 30 samples render; the output was converted to PDF and the Hungarian typography checked                                                |
+| Data export                    | Every exported document parses back to the invoice it came from                                                                            |
+| MCP server                     | Driven by a real MCP client, and the built binary driven over stdio                                                                        |
+| Exchange token decryption      | Round-trip tested for padded and unpadded tokens; no official vector exists                                                                |
+| Live NAV test system           | **Not yet exercised** — no technical user credentials                                                                                      |
 
 ## Validating before you send
 
