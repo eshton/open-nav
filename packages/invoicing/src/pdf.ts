@@ -52,6 +52,12 @@ export interface PdfOptions extends NativePdfOptions {
   /** Environment consulted when detecting a browser. Injectable for tests. */
   env?: Record<string, string | undefined>;
   /**
+   * Absolute locations probed when detecting a browser, in place of the usual
+   * install paths. Injectable for tests: those paths are the host's, so
+   * without this a test cannot describe a machine that has no browser.
+   */
+  searchPaths?: readonly string[];
+  /**
    * Convert HTML to PDF yourself, instead of spawning a browser.
    *
    * ```ts
@@ -89,7 +95,7 @@ export async function renderInvoicePdf(
 export async function htmlToPdf(html: string, options: PdfOptions = {}): Promise<Buffer> {
   if (options.convert) return options.convert(html);
 
-  const browser = options.browserPath ?? findBrowser(options.env);
+  const browser = options.browserPath ?? findBrowser(options.env, options.searchPaths);
   if (!browser) {
     throw new PdfConversionError(
       'No browser found to convert the document to PDF.\n' +
@@ -230,9 +236,15 @@ const WELL_KNOWN_PATHS = [
  *
  * Order: an explicit environment variable, a Playwright install, the usual
  * install locations, then `PATH`.
+ *
+ * `searchPaths` replaces that third step. It exists because the usual
+ * locations are absolute paths on the host, so no value of `env` can describe
+ * a machine without a browser — which is exactly what the failure path has to
+ * be tested against.
  */
 export function findBrowser(
   env: Record<string, string | undefined> = process.env,
+  searchPaths: readonly string[] = WELL_KNOWN_PATHS,
 ): string | undefined {
   for (const name of BROWSER_ENV_VARS) {
     const candidate = env[name];
@@ -242,7 +254,7 @@ export function findBrowser(
   const fromPlaywright = findPlaywrightChromium(env['PLAYWRIGHT_BROWSERS_PATH']);
   if (fromPlaywright) return fromPlaywright;
 
-  for (const candidate of WELL_KNOWN_PATHS) {
+  for (const candidate of searchPaths) {
     if (existsSync(candidate)) return candidate;
   }
 

@@ -23,12 +23,23 @@ describe('findBrowser', () => {
     expect(findBrowser({ PUPPETEER_EXECUTABLE_PATH: process.execPath })).toBe(process.execPath);
   });
 
+  // These pass an empty search-path list. The usual install locations are
+  // absolute paths on the host, so without that a machine which happens to
+  // have Chrome — every GitHub runner, for one — cannot be told apart from a
+  // machine that does not, and the test asserts a property of the runner.
   it('ignores a variable pointing at nothing', () => {
-    expect(findBrowser({ OPEN_NAV_BROWSER: '/nonexistent/chrome', PATH: '' })).toBeUndefined();
+    expect(findBrowser({ OPEN_NAV_BROWSER: '/nonexistent/chrome', PATH: '' }, [])).toBeUndefined();
   });
 
   it('finds nothing when there is nothing to find', () => {
-    expect(findBrowser({ PATH: '/nonexistent' })).toBeUndefined();
+    expect(findBrowser({ PATH: '/nonexistent' }, [])).toBeUndefined();
+  });
+
+  it('probes the usual install locations', () => {
+    // The step the two above switch off, so switching it off cannot quietly
+    // stop testing anything.
+    expect(findBrowser({ PATH: '/nonexistent' }, ['/nonexistent/chrome'])).toBeUndefined();
+    expect(findBrowser({ PATH: '/nonexistent' }, [process.execPath])).toBe(process.execPath);
   });
 
   it('prefers a full build over a headless shell, which cannot print', () => {
@@ -67,9 +78,10 @@ describe('conversion contract', () => {
   });
 
   it('explains that no browser was found, and how to supply one', async () => {
-    const failure = await htmlToPdf('<p>x</p>', { env: { PATH: '/nonexistent' } }).catch(
-      (error: unknown) => error as Error,
-    );
+    const failure = await htmlToPdf('<p>x</p>', {
+      env: { PATH: '/nonexistent' },
+      searchPaths: [],
+    }).catch((error: unknown) => error as Error);
     expect(failure).toBeInstanceOf(PdfConversionError);
     // The message has to name the ways out, or the caller is stuck.
     expect(failure.message).toContain('OPEN_NAV_BROWSER');
