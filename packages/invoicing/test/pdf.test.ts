@@ -86,7 +86,8 @@ describe('conversion contract', () => {
 
 withBrowser('against a real browser', () => {
   /** Running as root, Chrome needs its sandbox disabled. */
-  const sandbox = process.getuid?.() === 0 ? { sandbox: false } : {};
+  const sandbox: { engine: 'browser'; sandbox?: boolean } =
+    process.getuid?.() === 0 ? { engine: 'browser', sandbox: false } : { engine: 'browser' };
 
   it('produces a real PDF from an invoice', async () => {
     const pdf = await renderInvoicePdf(sample('belfoldi-termekertekesites.xml'), sandbox);
@@ -112,8 +113,12 @@ withBrowser('against a real browser', () => {
 
   it('says exactly what to do when the sandbox blocks it', async () => {
     if (process.getuid?.() !== 0) return;
+    // Explicit engine: the default is now native, which needs no browser.
     await expect(
-      renderInvoicePdf(sample('belfoldi-termekertekesites.xml'), { sandbox: true }),
+      renderInvoicePdf(sample('belfoldi-termekertekesites.xml'), {
+        engine: 'browser',
+        sandbox: true,
+      }),
     ).rejects.toThrowError(/--no-sandbox/);
   }, 60_000);
 

@@ -46,25 +46,45 @@ be shared and a single document still overridden.
 
 ### How the PDF is made, and why
 
-A Hungarian invoice needs `ő` and `ű`. Both are outside WinAnsi, the encoding
-the PDF core fonts use, so a dependency-free PDF writer cannot spell the
-language without bundling, licensing and subsetting a font. A browser already
-has fonts, already subsets and embeds them, and already implements `@page` —
-so the document is rendered as HTML and converted. The tests assert
-`/FontFile2` appears in the output, which is that font subset.
+`ő` and `ű` are the whole difficulty. Both lie outside WinAnsi, the encoding
+the PDF core fonts use, so **a font has to be embedded** for a Hungarian
+invoice to spell itself. (This is not hypothetical: of the fonts installed on
+the machine this was developed on, one — Loma — is missing exactly those four
+characters and nothing else.)
 
-`findBrowser()` locates Chrome, Chromium or Edge: an explicit
-`OPEN_NAV_BROWSER`, `CHROME_PATH` or `PUPPETEER_EXECUTABLE_PATH`, then a
-Playwright install, then the usual locations, then `PATH`. It prefers a full
-build over a headless shell, which cannot print.
+There are two engines, and the default needs nothing installed.
 
-**The sandbox stays on by default.** Invoice data is input, and the sandbox is
-what contains a malicious document. That means conversion fails when running
-as root, as in most containers — pass `sandbox: false`, or `--no-sandbox`,
-deliberately. The error says exactly that rather than quietly weakening the
-default for everyone.
+**`native`** — the default. pdfmake lays the document out, pdfkit writes the
+PDF, and the Roboto files pdfmake bundles supply the glyphs. Roboto covers
+Latin Extended-A, is Apache-2.0, and embeds as a subset with a correct
+ToUnicode map, so the text stays searchable and copyable. Output is around a
+quarter the size of a browser's.
 
-No browser at all? Supply your own converter:
+```ts
+const pdf = await renderInvoicePdf(invoice, { theme }); // native
+```
+
+Bring your own font if the brand needs one:
+
+```ts
+const pdf = await renderInvoicePdf(invoice, {
+  theme,
+  font: { name: 'Inter', normal: 'fonts/Inter-Regular.ttf', bold: 'fonts/Inter-SemiBold.ttf' },
+});
+```
+
+**`browser`** — renders the HTML document and converts it with Chrome,
+Chromium or Edge. It follows the HTML exactly, which matters if you have
+styled it with `customCss` beyond what the native layout reproduces.
+
+```sh
+open-nav render invoice.xml --pdf invoice.pdf --engine browser --no-sandbox
+```
+
+`findBrowser()` locates one: an explicit `OPEN_NAV_BROWSER`, `CHROME_PATH` or
+`PUPPETEER_EXECUTABLE_PATH`, then a Playwright install, then the usual
+locations, then `PATH` — preferring a full build over a headless shell, which
+cannot print. Or supply `convert` and use Playwright directly:
 
 ```ts
 import { chromium } from 'playwright';
@@ -78,8 +98,25 @@ const convert = async (html: string) => {
   return pdf;
 };
 
-const pdf = await renderInvoicePdf(invoice, { convert });
+const pdf = await renderInvoicePdf(invoice, { convert }); // implies browser
 ```
+
+**The browser sandbox stays on by default.** Invoice data is input, and the
+sandbox is what contains a malicious document, so conversion fails as root —
+usual in a container. Pass `sandbox: false`, or `--no-sandbox`, deliberately.
+
+The native engine has no such exposure: it fetches nothing and reads nothing
+but the font files it registered, both enforced through pdfmake's access
+policies rather than left at their permissive defaults.
+
+### The two engines are two layouts
+
+They follow the same theme, but the native engine builds the page from
+pdfmake's document model rather than CSS, so **they will not match pixel for
+pixel**. Known differences: party boxes have square corners rather than
+rounded, an SVG logo is skipped because pdfmake cannot rasterise one (use PNG
+or JPEG), and `customCss` applies only to HTML. The native engine adds page
+numbers when a document runs to more than one page.
 
 The HTML has no external references — no fonts, scripts or images fetched — so
 it renders the same offline and archives as a single file. Keep the logo

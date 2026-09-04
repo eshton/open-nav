@@ -65,6 +65,7 @@ export async function run(options: RunOptions): Promise<ExitCode> {
         logo: { type: 'string' },
         browser: { type: 'string' },
         'no-sandbox': { type: 'boolean' },
+        engine: { type: 'string' },
         delay: { type: 'string' },
         refresh: { type: 'boolean' },
         'number-from': { type: 'string' },

@@ -3,5 +3,7 @@ export * from './labels.js';
 export * from './markings.js';
 export * from './theme.js';
 export * from './html.js';
+export * from './color.js';
+export * from './pdf-native.js';
 export * from './pdf.js';
 export * from './export.js';

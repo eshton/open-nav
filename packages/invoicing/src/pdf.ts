@@ -3,26 +3,37 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { InvoiceData } from '@open-nav/core';
-import { renderInvoiceHtml, type RenderOptions } from './html.js';
+import { renderInvoiceHtml } from './html.js';
+import { renderInvoicePdfNative, type NativePdfOptions } from './pdf-native.js';
 
 /**
- * PDF output, by way of a browser.
+ * PDF output, by either of two engines.
  *
- * A Hungarian invoice needs `ő` and `ű`, which are outside the WinAnsi
- * encoding the PDF core fonts use. Writing the PDF directly would therefore
- * mean bundling and licensing a font with the right glyphs, and subsetting it.
- * A browser already has fonts, already subsets and embeds them, and already
- * implements `@page`. So the document is rendered as HTML and converted.
+ * `native` is the default and needs nothing installed: pdfmake lays the
+ * document out and pdfkit writes the PDF, using the Roboto files pdfmake
+ * bundles. Roboto covers Latin Extended-A, so `ő` and `ű` embed correctly —
+ * which was the whole difficulty, since the PDF core fonts cannot represent
+ * them and a font therefore has to be embedded.
  *
- * The cost is a browser on the machine. `findBrowser` locates one, `convert`
- * lets you supply your own (Playwright, Puppeteer, a print service), and the
- * error says which of those is missing.
+ * `browser` renders the HTML document and converts it with Chrome, Chromium
+ * or Edge. It follows the HTML exactly, at the cost of needing a browser.
+ *
+ * They are two layouts, not one: the native engine follows the same theme but
+ * builds the page from pdfmake's document model rather than CSS, so the two
+ * will not match pixel for pixel.
  */
 
 export class PdfConversionError extends Error {}
 
-export interface PdfOptions extends RenderOptions {
-  /** Browser executable. Auto-detected when omitted. */
+export interface PdfOptions extends NativePdfOptions {
+  /**
+   * Which engine to use.
+   *
+   * `native` (the default) needs nothing installed. `browser` follows the
+   * HTML document exactly but requires Chrome, Chromium or Edge.
+   */
+  engine?: 'native' | 'browser';
+  /** Browser executable. Auto-detected when omitted. `browser` engine only. */
   browserPath?: string;
   /** Extra arguments passed to the browser. */
   browserArgs?: string[];
@@ -58,11 +69,19 @@ export interface PdfOptions extends RenderOptions {
   convert?: (html: string) => Promise<Buffer>;
 }
 
-/** Render an invoice straight to PDF bytes. */
+/**
+ * Render an invoice straight to PDF bytes.
+ *
+ * Uses the native engine unless `engine: 'browser'` is asked for, or a
+ * `convert` function is supplied — passing a converter is itself a request to
+ * go through HTML.
+ */
 export async function renderInvoicePdf(
   document: InvoiceData,
   options: PdfOptions = {},
 ): Promise<Buffer> {
+  const engine = options.engine ?? (options.convert || options.browserPath ? 'browser' : 'native');
+  if (engine === 'native') return renderInvoicePdfNative(document, options);
   return htmlToPdf(renderInvoiceHtml(document, options), options);
 }
 

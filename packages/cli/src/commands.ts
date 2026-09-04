@@ -578,7 +578,7 @@ export const COMMANDS: CommandDefinition[] = [
     name: 'render',
     summary: 'Render an invoice as a printable HTML or PDF document',
     usage:
-      'open-nav render <file.xml> [--pdf file.pdf] [--out file.html] [--theme theme.json] [--logo logo.png] [--language hu|en] [--note text]',
+      'open-nav render <file.xml> [--pdf file.pdf] [--out file.html] [--theme theme.json] [--logo logo.png] [--engine native|browser] [--language hu|en] [--note text]',
     needsCredentials: false,
     options: [
       { flag: '--pdf', description: 'Write a PDF, converting with a local browser' },
@@ -587,8 +587,9 @@ export const COMMANDS: CommandDefinition[] = [
       { flag: '--logo', description: 'Image to inline as the logo, overriding the theme' },
       { flag: '--language', description: 'hu (default) or en' },
       { flag: '--note', description: 'Extra note printed under the totals' },
-      { flag: '--browser', description: 'Browser executable for PDF conversion' },
-      { flag: '--no-sandbox', description: 'Disable the browser sandbox (needed as root)' },
+      { flag: '--engine', description: 'native (default, no browser) or browser' },
+      { flag: '--browser', description: 'Browser executable — browser engine only' },
+      { flag: '--no-sandbox', description: 'Disable the browser sandbox — browser engine only' },
     ],
     async run(positionals, flags, context) {
       const path = requirePositional(positionals, 0, 'file');
@@ -611,8 +612,18 @@ export const COMMANDS: CommandDefinition[] = [
       const out = flags['out'] ? String(flags['out']) : undefined;
 
       if (pdfPath) {
+        const engineFlag = flags['engine'] ? String(flags['engine']).toLowerCase() : undefined;
+        if (engineFlag !== undefined && engineFlag !== 'native' && engineFlag !== 'browser') {
+          throw new UsageError('--engine must be native or browser');
+        }
+        // --browser and --no-sandbox mean nothing to the native engine, so
+        // naming either selects the browser rather than being ignored.
+        const engine: 'native' | 'browser' =
+          engineFlag ?? (flags['browser'] || flags['no-sandbox'] === true ? 'browser' : 'native');
+
         const pdf = await renderInvoicePdf(invoice, {
           ...renderOptions,
+          engine,
           ...(flags['browser'] ? { browserPath: String(flags['browser']) } : {}),
           ...(flags['no-sandbox'] === true ? { sandbox: false } : {}),
         });
@@ -624,6 +635,7 @@ export const COMMANDS: CommandDefinition[] = [
           pdf: pdfPath,
           bytes: pdf.length,
           language,
+          engine,
           ...(out ? { out } : {}),
         };
         writeResult(context.writer, context.format, 'render', data, () => [

@@ -544,3 +544,45 @@ describe('pull', () => {
     expect(pull?.needsCredentials).toBe(true);
   });
 });
+
+describe('render engine selection', () => {
+  it('uses the native engine by default, so no browser is required', async () => {
+    const { code, binary, json } = await cli(['render', 'good.xml', '--pdf', 'a.pdf']);
+    expect(code).toBe(EXIT.ok);
+    expect(binary.get('a.pdf')?.subarray(0, 5).toString()).toBe('%PDF-');
+    expect((json()['data'] as { engine: string }).engine).toBe('native');
+  }, 30_000);
+
+  it('selects the browser engine when a browser is named', async () => {
+    // Naming a browser must not be silently ignored by the native engine.
+    const { code, json } = await cli([
+      'render',
+      'good.xml',
+      '--pdf',
+      'a.pdf',
+      '--browser',
+      '/nonexistent/chrome',
+    ]);
+    expect(code).toBe(EXIT.unavailable);
+    expect((json()['error'] as { code: string }).code).toBe('PDF_CONVERSION');
+  });
+
+  it('rejects an unknown engine', async () => {
+    const { code, json } = await cli([
+      'render',
+      'good.xml',
+      '--pdf',
+      'a.pdf',
+      '--engine',
+      'wibble',
+    ]);
+    expect(code).toBe(EXIT.usage);
+    expect((json()['error'] as { message: string }).message).toContain('--engine');
+  });
+
+  it('applies the theme through the native engine', async () => {
+    const plain = await cli(['render', 'good.xml', '--pdf', 'a.pdf']);
+    const themed = await cli(['render', 'good.xml', '--pdf', 'a.pdf', '--theme', 'theme.json']);
+    expect(plain.binary.get('a.pdf')?.length).not.toBe(themed.binary.get('a.pdf')?.length);
+  }, 30_000);
+});
