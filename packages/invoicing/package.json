@@ -1,0 +1,54 @@
+{
+  "name": "@open-nav/invoicing",
+  "version": "0.1.0",
+  "description": "Render Hungarian invoices as printable documents, and produce the tax authority data export",
+  "keywords": [
+    "nav",
+    "onlineszamla",
+    "hungary",
+    "invoice",
+    "szamla",
+    "adatexport",
+    "pdf"
+  ],
+  "license": "MIT",
+  "author": "open-nav contributors",
+  "homepage": "https://github.com/eshton/open-nav#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eshton/open-nav.git",
+    "directory": "packages/invoicing"
+  },
+  "bugs": "https://github.com/eshton/open-nav/issues",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@open-nav/core": "workspace:^",
+    "pdfmake": "^0.3.11"
+  }
+}

@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Pack, validate and stop short of publishing'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  # Required for npm provenance and for trusted publishing (OIDC). Without it
+  # the publish still works, but the packages come out unattested.
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+
+      # Trusted publishing (OIDC) needs a recent npm; the one bundled with
+      # Node 22 predates it. Harmless when publishing with a token instead.
+      - run: npm install -g npm@latest
+
+      - run: pnpm install --frozen-lockfile
+
+      # A release is not the place to find out the tests were red.
+      - run: pnpm verify
+
+      # Tag pushes do not run the CI workflow, so re-check that the committed
+      # generated code still matches the vendored XSDs.
+      - run: pnpm codegen:check
+
+      - name: Check the tag matches the version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(node -p "require('./package.json').version")
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$version" != "$tag" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match version $version" >&2
+            exit 1
+          fi
+
+      - name: Publish
+        env:
+          # Set here rather than in .npmrc: provenance requires this OIDC-
+          # capable runner, and it makes a publish from a laptop fail outright.
+          NPM_CONFIG_PROVENANCE: true
+          # Only needed until trusted publishing is configured for each package
+          # on npmjs.com; with that in place the OIDC token above is enough.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          # A prerelease must never become what `npm install` picks up.
+          case "$version" in
+            *-*) tag=next ;;
+            *) tag=latest ;;
+          esac
+          dry=""
+          if [ "${{ inputs.dry-run }}" = "true" ]; then dry="--dry-run"; fi
+          node scripts/publish-packages.mjs --tag "$tag" $dry

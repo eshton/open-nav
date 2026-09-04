@@ -1,0 +1,211 @@
+{
+  "api_samples": [
+    {
+      "original_name": "manageAnnulment.xml",
+      "file": "manageannulment.xml",
+      "sha256": "bf82ff7e9a561b7774663c67aafa95542c9f043ae493702e690e0c814257d69c"
+    },
+    {
+      "original_name": "manageInvoice.xml",
+      "file": "manageinvoice.xml",
+      "sha256": "cb45e7b918eab2c581e2daaaa15e9bc0ae3d58d434d81d9afc216be7ee06e928"
+    },
+    {
+      "original_name": "queryInvoiceChainDigest.xml",
+      "file": "queryinvoicechaindigest.xml",
+      "sha256": "af14391d34ed718279b6c07e79545217588dbd4f0ee993a8577c319a69d137d9"
+    },
+    {
+      "original_name": "queryInvoiceCheck.xml",
+      "file": "queryinvoicecheck.xml",
+      "sha256": "d071d264a48f12c369a577f6a309fb9c223b166b6377d04a3cfef9a015235003"
+    },
+    {
+      "original_name": "queryInvoiceData.xml",
+      "file": "queryinvoicedata.xml",
+      "sha256": "3ef6a4723f9c172df8406c3c5dc1c080792212b837cebb6b067ebe2c35c06c42"
+    },
+    {
+      "original_name": "queryInvoiceDigest_inbound_invoice_chain.xml",
+      "file": "queryinvoicedigest-inbound-invoice-chain.xml",
+      "sha256": "c56786f15117e96e2c5119eacce9e946157b304ed8ff2f713189868c3907faab"
+    },
+    {
+      "original_name": "queryInvoiceDigest_outbound_query_params.xml",
+      "file": "queryinvoicedigest-outbound-query-params.xml",
+      "sha256": "a9331f059ff799b2f15736a082836658ae4f01900e4272452454123171340231"
+    },
+    {
+      "original_name": "queryTaxpayer.xml",
+      "file": "querytaxpayer.xml",
+      "sha256": "5dede353aaa66fb9a9788beccf93b1d7b1079fe71dae54eb198875df08f59d11"
+    },
+    {
+      "original_name": "queryTransactionList.xml",
+      "file": "querytransactionlist.xml",
+      "sha256": "87c32c8df29411daf3f59d3980070d41ef5a59196dbf4694323226b624991d66"
+    },
+    {
+      "original_name": "queryTransactionStatus.xml",
+      "file": "querytransactionstatus.xml",
+      "sha256": "5ba610c6c9af000224d1ee6f9fa1e6cc13c66de991d3f880de18f8e76b0c7e85"
+    },
+    {
+      "original_name": "tokenExchange.xml",
+      "file": "tokenexchange.xml",
+      "sha256": "0fe759132116518e7cc38637904e570da71d6cfba99f2495c97451f2118758ef"
+    }
+  ],
+  "data_samples": [
+    {
+      "original_name": "Belfoldi devizas szamla.xml",
+      "file": "belfoldi-devizas-szamla.xml",
+      "sha256": "7d95ed76e7390b5082592fee5bc98e8ee5ddb87331b31841d943af25d05fcf76"
+    },
+    {
+      "original_name": "Belfoldi devizas vegszamla tobb eloleg tetel.xml",
+      "file": "belfoldi-devizas-vegszamla-tobb-eloleg-tetel.xml",
+      "sha256": "a84820d0e3c25a2415aab767c8361a8cf8dacf78e14274c7d5e434301935e94d"
+    },
+    {
+      "original_name": "Belfoldi egyszerusitett szamla.xml",
+      "file": "belfoldi-egyszerusitett-szamla.xml",
+      "sha256": "9f885d2b29d7affe36f668afdd07a44e201e223d4f94c7fc81b182c90bdf04a2"
+    },
+    {
+      "original_name": "Belfoldi elolegszamla egysegar nelkul .xml",
+      "file": "belfoldi-elolegszamla-egysegar-nelkul.xml",
+      "sha256": "92269a42139b862a6b566069d0c84beacaa29d027533556b4ea30b07c92f0785"
+    },
+    {
+      "original_name": "Belfoldi elolegszamla.xml",
+      "file": "belfoldi-elolegszamla.xml",
+      "sha256": "d2c0118f83532586a6ff6b9129fd6ef04ab49bacc40f46567a4dc085b647dc50"
+    },
+    {
+      "original_name": "Belfoldi ertekesites tobb AFA tipus.xml",
+      "file": "belfoldi-ertekesites-tobb-afa-tipus.xml",
+      "sha256": "315e105e281b0af371c988239b94d45e08943304d6ac455f41484c83b882ec1d"
+    },
+    {
+      "original_name": "Belfoldi termekertekesites AFA csoportok kozott.xml",
+      "file": "belfoldi-termekertekesites-afa-csoportok-kozott.xml",
+      "sha256": "f7c4d29843cf9fb53f81872e4284bc10b5c0cbe349e2b5d691f7c16090194245"
+    },
+    {
+      "original_name": "Belfoldi termekertekesites maganszemelynek.xml",
+      "file": "belfoldi-termekertekesites-maganszemelynek.xml",
+      "sha256": "bdd307786e4ac5d3e2db70dbf31a1d4d1466dc21f1977019b9bc383dae45c7a7"
+    },
+    {
+      "original_name": "Belfoldi termekertekesites tetelbol adott engedmennyel.xml",
+      "file": "belfoldi-termekertekesites-tetelbol-adott-engedmennyel.xml",
+      "sha256": "02af0066ffffe5772e198e89f1d03a041afbae19ceabc104d4e8bf98e15f2f7b"
+    },
+    {
+      "original_name": "Belfoldi termekertekesites.xml",
+      "file": "belfoldi-termekertekesites.xml",
+      "sha256": "d9023dfb7405cc03814b464cf0911dffa116326cef64ac90e335f75a1976badf"
+    },
+    {
+      "original_name": "Belfoldi vegszamla.xml",
+      "file": "belfoldi-vegszamla.xml",
+      "sha256": "9a96fe789961bdc6c1f6439f179abe00cc7642dd599b4b19c05790cddfe81a73"
+    },
+    {
+      "original_name": "Eredeti szamla modositasokhoz.xml",
+      "file": "eredeti-szamla-modositasokhoz.xml",
+      "sha256": "259b5996a4936621aff00496df7710673a43cc9dfc3298ec81aadf190fd733ab"
+    },
+    {
+      "original_name": "Gyujtoszamla 1.xml",
+      "file": "gyujtoszamla-1.xml",
+      "sha256": "0a751855c2a800c39d30a7e388d1a047df85c009d016137b10326a1d79bbdb01"
+    },
+    {
+      "original_name": "Gyujtoszamla 2.xml",
+      "file": "gyujtoszamla-2.xml",
+      "sha256": "199207f00bb03218068f025c46ceaeeaa0aebda31bc9d95493d2c506a003322d"
+    },
+    {
+      "original_name": "Harmadik orszagbeli devizas szamla.xml",
+      "file": "harmadik-orszagbeli-devizas-szamla.xml",
+      "sha256": "3c42bfaabb2f9d59ee5eeca40f4c985fb78a0b75476233a0400cc94719213b67"
+    },
+    {
+      "original_name": "Modositas es ervenytelenites 1.xml",
+      "file": "modositas-es-ervenytelenites-1.xml",
+      "sha256": "dc2ef9704c99e11a17152ec5e51d28c1f3e51bdf347c543da08d122016ac4fb2"
+    },
+    {
+      "original_name": "Modositas es ervenytelenites 2.xml",
+      "file": "modositas-es-ervenytelenites-2.xml",
+      "sha256": "1ceed3a18b0d2e72d6d3fdf46f9d2257f43ed0c017d49ed24696fe34eb1b58f7"
+    },
+    {
+      "original_name": "Tagorszagi devizas szamla.xml",
+      "file": "tagorszagi-devizas-szamla.xml",
+      "sha256": "d3dbae884c02f3c745a1917afd04488d759b7691fd9bc39dfdae94b78854d971"
+    },
+    {
+      "original_name": "Termekdijas szamla.xml",
+      "file": "termekdijas-szamla.xml",
+      "sha256": "f2de3280ddc1dd9a50b83e93ef16b0d6264d873a6176c8c5374a3b5f00282410"
+    },
+    {
+      "original_name": "Teteladatok modositasa.xml",
+      "file": "teteladatok-modositasa.xml",
+      "sha256": "0ccfe127eb3b10f5a209ce10800640f151a15c132ac6685582f588869e9e6f3e"
+    },
+    {
+      "original_name": "Teves termek helyesbitese 20.xml",
+      "file": "teves-termek-helyesbitese-20.xml",
+      "sha256": "6f6ed817f9aa1b70f844545e1e5866d208192e73610539a906a2cfce157f1ed3"
+    },
+    {
+      "original_name": "Teves termek helyesbitese 21.xml",
+      "file": "teves-termek-helyesbitese-21.xml",
+      "sha256": "026d40c6671b8b1f6bc1c713bbb5edbe292eaf96d3a147cf094cf8589ed4c0ac"
+    },
+    {
+      "original_name": "Teves termek helyesbitese.xml",
+      "file": "teves-termek-helyesbitese.xml",
+      "sha256": "78f69a82df22ed077aa33d35922ae06ad5c7c47f9ed5a514ba2b7c7bcd855f68"
+    },
+    {
+      "original_name": "Tobb szamla modositasa egy okirattal alap 1.xml",
+      "file": "tobb-szamla-modositasa-egy-okirattal-alap-1.xml",
+      "sha256": "d9b463f8e16775dc53bfd455576856ed2e08d950ec1daa5fdcf1eb1834accdc2"
+    },
+    {
+      "original_name": "Tobb szamla modositasa egy okirattal alap 2.xml",
+      "file": "tobb-szamla-modositasa-egy-okirattal-alap-2.xml",
+      "sha256": "e9bf4e22630cdeccd631605cc55fb0afdf59b64275c3eba530d0020bf7fd8d9a"
+    },
+    {
+      "original_name": "Tobb szamla modositasa egy okirattal alap 3.xml",
+      "file": "tobb-szamla-modositasa-egy-okirattal-alap-3.xml",
+      "sha256": "b194f03232557f77cd2ee2c2a6d8af0892eeb62d0f37207d352fe85bf47572bb"
+    },
+    {
+      "original_name": "Tobb szamla modositasa egy okirattal.xml",
+      "file": "tobb-szamla-modositasa-egy-okirattal.xml",
+      "sha256": "1298d5384f7abd02a25348c5a0b5d02066c4449ddb013c6afefa419f5c530742"
+    },
+    {
+      "original_name": "Tobbszoros modositas 1.xml",
+      "file": "tobbszoros-modositas-1.xml",
+      "sha256": "9adae51c943da800dba377382f986523cff7b9e848fadbf388de5e0c694f0bde"
+    },
+    {
+      "original_name": "Tobbszoros modositas 2.xml",
+      "file": "tobbszoros-modositas-2.xml",
+      "sha256": "65174c13e8d68169782ba345202dcc4996fd50e65fc462666431cbf7b6c29038"
+    },
+    {
+      "original_name": "Uj kozlekedesi eszkoz export.xml",
+      "file": "uj-kozlekedesi-eszkoz-export.xml",
+      "sha256": "ed6213ebeaf840a60066dd36e5935f7322c45d23bad85965044f601a9b4aa5af"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@open-nav/codegen",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Generates TypeScript types and runtime schema metadata from the official NAV XSDs",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/main.js",
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "generate": "node dist/main.js"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^4.5.1"
+  }
+}

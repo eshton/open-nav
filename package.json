@@ -1,0 +1,44 @@
+{
+  "name": "open-nav",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open source libraries and tools for the Hungarian Tax Authority (NAV) Online Számla API",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "build": "tsc -b packages/codegen packages/core packages/client packages/invoicing packages/cli packages/mock-server packages/mcp",
+    "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo",
+    "typecheck": "tsc -b --force packages/codegen packages/core packages/client packages/invoicing packages/cli packages/mock-server packages/mcp",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify": "pnpm format:check && pnpm licences && pnpm typecheck && pnpm test && pnpm check:packages",
+    "codegen": "tsc -b packages/codegen && node packages/codegen/dist/main.js && prettier --write --log-level warn packages/core/src/generated",
+    "codegen:check": "pnpm codegen && git diff --exit-code -- packages/core/src/generated",
+    "licences": "node scripts/check-licences.mjs",
+    "licences:fix": "node scripts/check-licences.mjs --fix",
+    "pack": "pnpm build && node scripts/pack-packages.mjs",
+    "check:packages": "pnpm build && node scripts/check-packages.mjs",
+    "version:set": "node scripts/set-version.mjs",
+    "publish:packages": "pnpm build && node scripts/publish-packages.mjs"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@types/node": "^22.10.2",
+    "prettier": "^3.4.2",
+    "publint": "^0.3.24",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
