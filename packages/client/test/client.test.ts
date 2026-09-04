@@ -268,6 +268,38 @@ describe('error handling', () => {
     expect(requests).toHaveLength(2);
   });
 
+  it('reports the first failure, not the replay the retry earns', async () => {
+    // NAV registers the requestId on receipt. So a request that reached it and
+    // then failed comes back as INVALID_REQUEST_ID on the retry — a verdict
+    // that describes our retry rather than the failure, and that sends the
+    // reader looking for a bug in id generation instead.
+    const { fetch, requests } = stubFetch((_url, _body, call) =>
+      call === 0
+        ? { status: 500, body: generalErrorResponse('OPERATION_FAILED', 'the real problem') }
+        : { status: 400, body: generalErrorResponse('INVALID_REQUEST_ID', 'already been used') },
+    );
+    const error = (await client(fetch, 2)
+      .tokenExchange()
+      .catch((caught: unknown) => caught)) as NavApiError;
+
+    expect(error.errorCode).toBe('OPERATION_FAILED');
+    expect(error.message).toContain('the real problem');
+    expect(requests).toHaveLength(2);
+  });
+
+  it('still reports a replay when there was no earlier failure', async () => {
+    // A genuinely reused requestId must keep saying so.
+    const { fetch } = stubFetch(() => ({
+      status: 400,
+      body: generalErrorResponse('INVALID_REQUEST_ID', 'already been used'),
+    }));
+    const error = (await client(fetch, 2)
+      .tokenExchange()
+      .catch((caught: unknown) => caught)) as NavApiError;
+
+    expect(error.errorCode).toBe('INVALID_REQUEST_ID');
+  });
+
   it('never retries a submission, even on 5xx', async () => {
     // A manageInvoice that reached NAV must not be resent: the requestId
     // would be a replay, and a delivered batch could be duplicated.

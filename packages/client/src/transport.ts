@@ -94,7 +94,15 @@ export async function postXml(
     }
 
     // Any other 4xx is a decision by NAV and will not change on retry.
-    if (response.status < 500 || response.status === 501) throw error;
+    if (response.status < 500 || response.status === 501) {
+      // Except one: NAV registers the requestId on receipt, so a retry of a
+      // request that did reach it comes back as a replay. That verdict says
+      // nothing about what went wrong — the first attempt's error does, and
+      // reporting the replay instead sends you looking for a bug in your id
+      // generation rather than at the failure that caused the retry.
+      if (error.errorCode === 'INVALID_REQUEST_ID' && lastError !== undefined) throw lastError;
+      throw error;
+    }
     lastError = error;
   }
 
