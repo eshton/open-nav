@@ -13,6 +13,7 @@ import {
 } from '@open-nav/core';
 import { NavClient, waitForTransaction, type NavCredentials } from '@open-nav/client';
 import { createDataExport, renderInvoiceHtml } from '@open-nav/invoicing';
+import { VERSION } from './version.js';
 
 /**
  * MCP server for the Online Számla invoice service.
@@ -87,7 +88,7 @@ function parseInvoice(xml: string): InvoiceData {
 }
 
 export function createNavMcpServer(options: NavMcpOptions = {}): McpServer {
-  const server = new McpServer({ name: 'open-nav', version: '0.1.0' });
+  const server = new McpServer({ name: 'open-nav', version: VERSION });
   registerOfflineTools(server);
   if (options.credentials && options.software) {
     registerOnlineTools(server, {

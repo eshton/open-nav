@@ -21,9 +21,16 @@ from the XSDs. Change the generator, not its output.
 
 ```sh
 pnpm install
-pnpm verify        # format check, typecheck, tests — what CI runs
+pnpm verify        # format, licences, typecheck, tests, tarballs — what CI runs
 pnpm test:watch
 ```
+
+`pnpm verify` ends by packing every package and inspecting the tarballs, which
+is slower than the rest put together but catches the class of mistake that is
+invisible in the source tree. `pnpm test` alone is the fast loop.
+
+Releases are cut from a tag by a maintainer — see [RELEASING.md](RELEASING.md).
+Nothing in a pull request should touch a version number.
 
 ## What makes a good pull request
 

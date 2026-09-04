@@ -40,3 +40,7 @@ jobs:
       - run: pnpm codegen:check
 
       - run: pnpm test
+
+      # The published tarballs, not the source tree: `files`, the export maps
+      # and the workspace: rewriting only take effect at pack time.
+      - run: pnpm check:packages

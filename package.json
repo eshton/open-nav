@@ -2,7 +2,7 @@
   "name": "open-nav",
   "version": "0.1.0",
   "private": true,
-  "description": "Open source libraries and tools for the Hungarian Tax Authority (NAV) Online Sz\u00e1mla API",
+  "description": "Open source libraries and tools for the Hungarian Tax Authority (NAV) Online Számla API",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -18,13 +18,21 @@
     "coverage": "vitest run --coverage",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify": "pnpm format:check && pnpm typecheck && pnpm test",
+    "verify": "pnpm format:check && pnpm licences && pnpm typecheck && pnpm test && pnpm check:packages",
     "codegen": "tsc -b packages/codegen && node packages/codegen/dist/main.js && prettier --write --log-level warn packages/core/src/generated",
-    "codegen:check": "pnpm codegen && git diff --exit-code -- packages/core/src/generated"
+    "codegen:check": "pnpm codegen && git diff --exit-code -- packages/core/src/generated",
+    "licences": "node scripts/check-licences.mjs",
+    "licences:fix": "node scripts/check-licences.mjs --fix",
+    "pack": "pnpm build && node scripts/pack-packages.mjs",
+    "check:packages": "pnpm build && node scripts/check-packages.mjs",
+    "version:set": "node scripts/set-version.mjs",
+    "publish:packages": "pnpm build && node scripts/publish-packages.mjs"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
     "@types/node": "^22.10.2",
     "prettier": "^3.4.2",
+    "publint": "^0.3.24",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   },

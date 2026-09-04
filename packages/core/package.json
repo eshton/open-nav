@@ -12,21 +12,37 @@
     "tax"
   ],
   "license": "MIT",
+  "author": "open-nav contributors",
+  "homepage": "https://github.com/eshton/open-nav#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eshton/open-nav.git",
+    "directory": "packages/core"
+  },
+  "bugs": "https://github.com/eshton/open-nav/issues",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
-    "README.md"
+    "src",
+    "README.md",
+    "LICENSE"
   ],
+  "sideEffects": false,
   "engines": {
     "node": ">=20.10.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsc -b"

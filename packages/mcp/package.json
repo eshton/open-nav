@@ -1,7 +1,7 @@
 {
   "name": "@open-nav/mcp",
   "version": "0.1.0",
-  "description": "MCP server exposing the Hungarian NAV Online Sz\u00e1mla invoice service to AI agents",
+  "description": "MCP server exposing the Hungarian NAV Online Számla invoice service to AI agents",
   "keywords": [
     "nav",
     "onlineszamla",
@@ -12,24 +12,40 @@
     "ai"
   ],
   "license": "MIT",
+  "author": "open-nav contributors",
+  "homepage": "https://github.com/eshton/open-nav#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eshton/open-nav.git",
+    "directory": "packages/mcp"
+  },
+  "bugs": "https://github.com/eshton/open-nav/issues",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
   },
   "bin": {
     "open-nav-mcp": "./dist/bin.js"
   },
   "files": [
     "dist",
-    "README.md"
+    "src",
+    "README.md",
+    "LICENSE"
   ],
+  "sideEffects": false,
   "engines": {
     "node": ">=20.10.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsc -b"

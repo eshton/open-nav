@@ -4,9 +4,11 @@ Open source libraries and tools for the Hungarian Tax and Customs
 Administration's (NAV) **Online Számla** system — building invoice data that
 NAV accepts, reporting it, and pulling invoices issued to you.
 
-> **Status: early development.** The packages are not published yet and the
-> API surface will change without notice. Nothing here has been exercised
-> against NAV's live test system yet — see [Verification status](#verification-status).
+> **Status: early development.** The packages are release-ready but not yet
+> on npm — the scope is reserved and the pipeline is in place, see
+> [Installing](#installing). The API surface will change without notice, and
+> nothing here has been exercised against NAV's live test system yet — see
+> [Verification status](#verification-status).
 
 _[Magyar összefoglaló a lap alján.](#magyarul)_
 
@@ -76,7 +78,7 @@ A library should absorb all four. That is the entire premise of this project.
 | `packages/codegen`     | Generates the types, schema metadata and fault catalogue from the XSDs |
 | `schemas/`             | Official NAV XSDs and message catalogues, vendored verbatim            |
 | `conformance/`         | NAV's own 41 sample documents, used as the golden test corpus          |
-| `scripts/`             | Schema vendoring and drift detection                                   |
+| `scripts/`             | Schema vendoring, drift detection, packaging and release               |
 
 Every package listed above is implemented. What is deliberately absent is
 covered under [Scope](#scope).
@@ -112,6 +114,7 @@ Being explicit, because it matters for anyone considering this in production:
 | Data export                    | Every exported document parses back to the invoice it came from                                                                                                              |
 | MCP server                     | Driven by a real MCP client, and the built binary driven over stdio                                                                                                          |
 | Exchange token decryption      | Round-trip tested for padded and unpadded tokens; no official vector exists                                                                                                  |
+| Published packages             | Every tarball passes `publint` and `attw`, and all six were installed from tarballs into a clean project and exercised end to end                                            |
 | Live NAV test system           | **Not yet exercised** — no technical user credentials                                                                                                                        |
 
 ## Validating before you send
@@ -295,15 +298,51 @@ The end-to-end tests drive the real client against it over real HTTP, which is
 what lets signature construction be checked by an independent implementation
 rather than only against itself.
 
-## Requirements
+## Installing
 
-Node.js 20.10 or newer, and pnpm 10.
+Node.js 20.10 or newer. The packages are ESM-only — a CommonJS consumer needs
+`await import(...)`.
+
+```sh
+npm install @open-nav/core @open-nav/client   # report and query
+npm install @open-nav/invoicing               # printable documents, NGM export
+npm install -D @open-nav/mock-server          # test without credentials
+```
+
+The command line tool and the MCP server are meant to be run, not imported:
+
+```sh
+npx @open-nav/cli --help
+npx @open-nav/mcp                             # speaks MCP over stdio
+```
+
+Take only what you need: `@open-nav/core` has one dependency and no network
+access at all, so validating and building invoice data does not pull in a
+client, and rendering does not pull in either.
+
+| Package                 | Depends on              | Third-party dependencies           |
+| ----------------------- | ----------------------- | ---------------------------------- |
+| `@open-nav/core`        | —                       | `fast-xml-parser`                  |
+| `@open-nav/client`      | core                    | none                               |
+| `@open-nav/invoicing`   | core                    | `pdfmake`                          |
+| `@open-nav/mock-server` | core                    | none                               |
+| `@open-nav/cli`         | core, client, invoicing | none                               |
+| `@open-nav/mcp`         | core, client, invoicing | `@modelcontextprotocol/sdk`, `zod` |
+
+Every package ships its TypeScript sources next to the compiled output, so
+stepping into this code in a debugger lands in the real source.
+
+## Working on it
+
+pnpm 10, and:
 
 ```sh
 pnpm install
-pnpm verify    # format check, typecheck, tests
+pnpm verify    # format, licences, typecheck, tests, and the packed tarballs
 pnpm codegen   # regenerate types from the XSDs
 ```
+
+Releases are cut from a tag; see [RELEASING.md](RELEASING.md).
 
 ## Usage sketch
 

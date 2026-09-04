@@ -5,6 +5,7 @@ import { COMMANDS, describeCommands, findCommand, type CommandContext } from './
 import { ENV_VARS } from './config.js';
 import { EXIT, UsageError, type ExitCode } from './errors.js';
 import { consoleWriter, resolveFormat, writeError, type Format, type Writer } from './output.js';
+import { VERSION } from './version.js';
 
 export interface RunOptions {
   argv: string[];
@@ -176,8 +177,6 @@ function reportError(writer: Writer, format: Format, command: string, error: unk
   writeError(writer, format, command, { message: (error as Error).message ?? String(error) });
   return EXIT.failure;
 }
-
-const VERSION = '0.1.0';
 
 function writeHelp(writer: Writer, topic: string | undefined): void {
   if (topic === 'config') {

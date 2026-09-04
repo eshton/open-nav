@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path';
 import type { SoftwareType } from '@open-nav/core';
 import type { NavCredentials } from '@open-nav/client';
 import { UsageError } from './errors.js';
+import { VERSION } from './version.js';
 
 /**
  * Configuration comes from the environment, optionally seeded from a local
@@ -50,7 +51,7 @@ export const REQUIRED_VARS: readonly string[] = [
 export const DEFAULTS: Readonly<Record<string, string>> = {
   [ENV_VARS.environment]: 'test',
   [ENV_VARS.softwareName]: 'open-nav',
-  [ENV_VARS.softwareVersion]: '0.1.0',
+  [ENV_VARS.softwareVersion]: VERSION,
   [ENV_VARS.softwareOperation]: 'LOCAL_SOFTWARE',
   [ENV_VARS.softwareDevName]: 'open-nav',
   [ENV_VARS.softwareDevContact]: 'unknown',
@@ -231,7 +232,7 @@ export function loadConfig(options: LoadOptions = {}): LoadedConfig {
       softwareId: env[ENV_VARS.softwareId]!,
       softwareName: env[ENV_VARS.softwareName] ?? 'open-nav',
       softwareOperation: operationRaw,
-      softwareMainVersion: env[ENV_VARS.softwareVersion] ?? '0.1.0',
+      softwareMainVersion: env[ENV_VARS.softwareVersion] ?? VERSION,
       softwareDevName: env[ENV_VARS.softwareDevName] ?? 'open-nav',
       softwareDevContact: env[ENV_VARS.softwareDevContact] ?? 'unknown',
       ...(env[ENV_VARS.softwareDevTaxNumber]

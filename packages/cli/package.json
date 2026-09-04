@@ -1,7 +1,7 @@
 {
   "name": "@open-nav/cli",
   "version": "0.1.0",
-  "description": "Command line tool for the Hungarian Tax Authority (NAV) Online Sz\u00e1mla API",
+  "description": "Command line tool for the Hungarian Tax Authority (NAV) Online Számla API",
   "keywords": [
     "nav",
     "onlineszamla",
@@ -11,18 +11,40 @@
     "agent"
   ],
   "license": "MIT",
+  "author": "open-nav contributors",
+  "homepage": "https://github.com/eshton/open-nav#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eshton/open-nav.git",
+    "directory": "packages/cli"
+  },
+  "bugs": "https://github.com/eshton/open-nav/issues",
   "type": "module",
   "main": "./dist/main.js",
   "types": "./dist/main.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/main.d.ts",
+      "import": "./dist/main.js",
+      "default": "./dist/main.js"
+    },
+    "./package.json": "./package.json"
+  },
   "bin": {
     "open-nav": "./dist/bin.js"
   },
   "files": [
     "dist",
-    "README.md"
+    "src",
+    "README.md",
+    "LICENSE"
   ],
+  "sideEffects": false,
   "engines": {
     "node": ">=20.10.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsc -b"

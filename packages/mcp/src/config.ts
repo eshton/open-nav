@@ -1,5 +1,6 @@
 import type { SoftwareType } from '@open-nav/core';
 import type { NavCredentials } from '@open-nav/client';
+import { VERSION } from './version.js';
 
 /**
  * Configuration from the environment, using the same variables as the CLI so
@@ -56,7 +57,7 @@ export function resolveConfig(
       softwareId: env['NAV_SOFTWARE_ID']!,
       softwareName: env['NAV_SOFTWARE_NAME'] ?? 'open-nav',
       softwareOperation: operation,
-      softwareMainVersion: env['NAV_SOFTWARE_VERSION'] ?? '0.1.0',
+      softwareMainVersion: env['NAV_SOFTWARE_VERSION'] ?? VERSION,
       softwareDevName: env['NAV_SOFTWARE_DEV_NAME'] ?? 'open-nav',
       softwareDevContact: env['NAV_SOFTWARE_DEV_CONTACT'] ?? 'unknown',
       ...(env['NAV_SOFTWARE_DEV_TAX_NUMBER']

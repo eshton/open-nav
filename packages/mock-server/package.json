@@ -1,7 +1,7 @@
 {
   "name": "@open-nav/mock-server",
   "version": "0.1.0",
-  "description": "A local stand-in for the NAV Online Sz\u00e1mla invoice service, for testing without credentials",
+  "description": "A local stand-in for the NAV Online Számla invoice service, for testing without credentials",
   "keywords": [
     "nav",
     "onlineszamla",
@@ -11,24 +11,40 @@
     "testing"
   ],
   "license": "MIT",
+  "author": "open-nav contributors",
+  "homepage": "https://github.com/eshton/open-nav#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eshton/open-nav.git",
+    "directory": "packages/mock-server"
+  },
+  "bugs": "https://github.com/eshton/open-nav/issues",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
   },
   "bin": {
     "open-nav-mock": "./dist/bin.js"
   },
   "files": [
     "dist",
-    "README.md"
+    "src",
+    "README.md",
+    "LICENSE"
   ],
+  "sideEffects": false,
   "engines": {
     "node": ">=20.10.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsc -b"
