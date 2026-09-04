@@ -13,6 +13,7 @@ export interface RunOptions {
   env?: Record<string, string | undefined>;
   cwd?: string;
   readFile?: (path: string) => string;
+  writeFile?: (path: string, contents: string) => void;
 }
 
 const GLOBAL_OPTIONS = {
@@ -53,6 +54,10 @@ export async function run(options: RunOptions): Promise<ExitCode> {
         compress: { type: 'boolean' },
         xml: { type: 'boolean' },
         'skip-validation': { type: 'boolean' },
+        out: { type: 'string' },
+        note: { type: 'string' },
+        'number-from': { type: 'string' },
+        'number-to': { type: 'string' },
         'warnings-as-errors': { type: 'boolean' },
       },
       allowPositionals: true,
@@ -104,6 +109,7 @@ export async function run(options: RunOptions): Promise<ExitCode> {
       ...(options.cwd ? { cwd: options.cwd } : {}),
     },
     ...(options.readFile ? { readFile: options.readFile } : {}),
+    ...(options.writeFile ? { writeFile: options.writeFile } : {}),
   };
 
   try {

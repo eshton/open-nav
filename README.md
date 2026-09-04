@@ -65,19 +65,20 @@ A library should absorb all four. That is the entire premise of this project.
 
 ## Layout
 
-| Path               | What it is                                                             |
-| ------------------ | ---------------------------------------------------------------------- |
-| `packages/core`    | Types, crypto, XML, payload encoding, exact decimals, validation       |
-| `packages/client`  | Client for all ten service operations, plus transaction polling        |
-| `packages/cli`     | `open-nav` command line tool, built for scripts and agents             |
-| `packages/codegen` | Generates the types, schema metadata and fault catalogue from the XSDs |
-| `schemas/`         | Official NAV XSDs and message catalogues, vendored verbatim            |
-| `conformance/`     | NAV's own 41 sample documents, used as the golden test corpus          |
-| `scripts/`         | Schema vendoring and drift detection                                   |
+| Path                   | What it is                                                             |
+| ---------------------- | ---------------------------------------------------------------------- |
+| `packages/core`        | Types, crypto, XML, payload encoding, exact decimals, validation       |
+| `packages/client`      | Client for all ten service operations, plus transaction polling        |
+| `packages/invoicing`   | Printable invoice documents and the NGM data export                    |
+| `packages/mock-server` | A local stand-in for the service, for testing without credentials      |
+| `packages/cli`         | `open-nav` command line tool, built for scripts and agents             |
+| `packages/codegen`     | Generates the types, schema metadata and fault catalogue from the XSDs |
+| `schemas/`             | Official NAV XSDs and message catalogues, vendored verbatim            |
+| `conformance/`         | NAV's own 41 sample documents, used as the golden test corpus          |
+| `scripts/`             | Schema vendoring and drift detection                                   |
 
-Still to come: a local mock of the invoice service, and invoice document
-generation with the 23/2014. (VI. 30.) NGM data export. Neither is stubbed out
-in advance.
+Every package listed above is implemented. What is deliberately absent is
+covered under [Scope](#scope).
 
 ## Approach
 
@@ -163,6 +164,57 @@ exit codes (`3` invalid document, `4` rejected by NAV, `5` no verdict), and
 `--describe` to emit the whole command surface as JSON so a caller can
 discover it. `validate` and `fault` need no credentials at all. See
 [packages/cli/README.md](packages/cli/README.md).
+
+## Documents and the data export
+
+Two things an invoicing program must be able to produce, in
+[`packages/invoicing`](packages/invoicing/README.md).
+
+**A printable invoice**, with the phrases the VAT Act requires derived from
+the data rather than left to a template — _fordított adózás_, the legal ground
+of an exemption, which margin scheme applies — each printed with the provision
+it comes from.
+
+```sh
+open-nav render invoice.xml --out invoice.html
+chromium --headless --print-to-pdf=invoice.pdf invoice.html
+```
+
+HTML rather than PDF directly, because `ő` and `ű` are outside the encoding
+the PDF core fonts use: a dependency-free PDF writer cannot spell Hungarian
+without bundling a licensed font, while a browser embeds the subsets it needs.
+
+**The tax authority data export** required by decree 23/2014. (VI. 30.) NGM:
+
+```sh
+open-nav export invoices/*.xml --out export/ --from 2024-01-01 --to 2024-12-31
+```
+
+Section 13/A(1) of that decree lets the taxpayer use the structure published
+for the online invoice data service instead of the decree's own Annex 3, so
+the export is produced in `invoiceData.xsd` — the schema already generated,
+validated and round-tripped here. If an auditor asks for the Annex 3
+structure specifically, this is not it.
+
+## Testing without credentials
+
+[`packages/mock-server`](packages/mock-server/README.md) is a local stand-in
+for the invoice service. It matters more than usual here, because NAV's test
+system needs a technical user that cannot live in a public repository.
+
+```sh
+npx @open-nav/mock-server     # prints fake credentials to export
+```
+
+It is not a stub. It verifies the request signature the way NAV does —
+including the per-operation hashes concatenated in index order for a batch —
+rejects a replayed `requestId`, spends an exchange token exactly once, and
+decides each invoice's fate by running it through this project's validator, so
+a broken invoice comes back `ABORTED` with the fault code NAV would report.
+
+The end-to-end tests drive the real client against it over real HTTP, which is
+what lets signature construction be checked by an independent implementation
+rather than only against itself.
 
 ## Requirements
 

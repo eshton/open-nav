@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import {
   NavApiError,
   faultMessage,
@@ -10,6 +11,7 @@ import {
   type InvoiceValidationIssue,
 } from '@open-nav/core';
 import { NavClient, waitForTransaction } from '@open-nav/client';
+import { createDataExport, renderInvoiceHtml } from '@open-nav/invoicing';
 import { EXIT, UsageError, type ExitCode } from './errors.js';
 import { describeConfig, loadConfig, loadEnvironment, type LoadOptions } from './config.js';
 import { renderFields, renderIssues, writeResult, type Format, type Writer } from './output.js';
@@ -20,6 +22,8 @@ export interface CommandContext {
   load: LoadOptions;
   /** Read a file, so tests need no filesystem. */
   readFile?: (path: string) => string;
+  /** Write a file, creating parent directories. Injectable for tests. */
+  writeFile?: (path: string, contents: string) => void;
 }
 
 export interface CommandDefinition {
@@ -49,6 +53,24 @@ function client(context: CommandContext): NavClient {
 function readInput(path: string, context: CommandContext): string {
   const read = context.readFile ?? ((target: string) => readFileSync(target, 'utf8'));
   return path === '-' ? read('/dev/stdin') : read(path);
+}
+
+function writeOutput(path: string, contents: string, context: CommandContext): void {
+  if (context.writeFile) {
+    context.writeFile(path, contents);
+    return;
+  }
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, contents, 'utf8');
+}
+
+/** Read an InvoiceData document, failing clearly if it is something else. */
+function readInvoice(path: string, context: CommandContext): InvoiceData {
+  const parsed = parseDocument(readInput(path, context), { unknownElements: 'ignore' });
+  if (parsed.root !== 'InvoiceData') {
+    throw new UsageError(`${path}: expected an InvoiceData document, found ${parsed.root}`);
+  }
+  return parsed.value as InvoiceData;
 }
 
 function requirePositional(positionals: string[], index: number, name: string): string {
@@ -475,6 +497,93 @@ export const COMMANDS: CommandDefinition[] = [
       const data = { found: true, invoiceNumber, auditData: result.auditData, invoice };
       writeResult(context.writer, context.format, 'invoice', data, () => [
         serializeDocument('InvoiceData', invoice, { indent: '  ' }),
+      ]);
+      return EXIT.ok;
+    },
+  },
+
+  {
+    name: 'render',
+    summary: 'Render an invoice as a printable HTML document',
+    usage: 'open-nav render <file.xml> [--out file.html] [--language hu|en] [--note text]',
+    needsCredentials: false,
+    options: [
+      { flag: '--out', description: 'Write to this file instead of standard output' },
+      { flag: '--language', description: 'hu (default) or en' },
+      { flag: '--note', description: 'Extra note printed under the totals' },
+    ],
+    async run(positionals, flags, context) {
+      const path = requirePositional(positionals, 0, 'file');
+      const invoice = readInvoice(path, context);
+
+      const language = flags['language'] ? String(flags['language']) : 'hu';
+      if (language !== 'hu' && language !== 'en') {
+        throw new UsageError('--language must be hu or en');
+      }
+
+      const html = renderInvoiceHtml(invoice, {
+        language,
+        ...(flags['note'] ? { note: String(flags['note']) } : {}),
+      });
+
+      const out = flags['out'] ? String(flags['out']) : undefined;
+      if (!out) {
+        // Straight to stdout, so it can be piped into a PDF converter.
+        context.writer.out(html);
+        return EXIT.ok;
+      }
+
+      writeOutput(out, html, context);
+      const data = { file: path, out, bytes: html.length, language };
+      writeResult(context.writer, context.format, 'render', data, () => [
+        `Wrote ${out} (${html.length} bytes).`,
+        'To PDF:  chromium --headless --print-to-pdf=invoice.pdf ' + out,
+      ]);
+      return EXIT.ok;
+    },
+  },
+
+  {
+    name: 'export',
+    summary: 'Produce the tax authority data export for a set of invoices',
+    usage:
+      'open-nav export <file.xml...> --out <dir> [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--number-from N] [--number-to N]',
+    needsCredentials: false,
+    options: [
+      { flag: '--out', description: 'Directory to write the export into (required)' },
+      { flag: '--from', description: 'First issue date to include' },
+      { flag: '--to', description: 'Last issue date to include' },
+      { flag: '--number-from', description: 'First invoice number to include' },
+      { flag: '--number-to', description: 'Last invoice number to include' },
+    ],
+    async run(positionals, flags, context) {
+      if (positionals.length === 0) throw new UsageError('Missing <file.xml>');
+      const out = flags['out'] ? String(flags['out']) : undefined;
+      if (!out) throw new UsageError('--out <dir> is required');
+
+      const invoices = positionals.map((path) => readInvoice(path, context));
+      const result = createDataExport(invoices, {
+        ...(flags['from'] ? { issueDateFrom: String(flags['from']) } : {}),
+        ...(flags['to'] ? { issueDateTo: String(flags['to']) } : {}),
+        ...(flags['number-from'] ? { invoiceNumberFrom: String(flags['number-from']) } : {}),
+        ...(flags['number-to'] ? { invoiceNumberTo: String(flags['number-to']) } : {}),
+      });
+
+      for (const file of result.files) {
+        writeOutput(join(out, file.name), file.contents, context);
+      }
+
+      const data = {
+        out,
+        considered: invoices.length,
+        exported: result.manifest.invoiceCount,
+        files: result.files.map((file) => file.name),
+        structure: result.manifest.structure,
+      };
+      writeResult(context.writer, context.format, 'export', data, () => [
+        `Exported ${result.manifest.invoiceCount} of ${invoices.length} invoice(s) to ${out}.`,
+        `Structure: ${result.manifest.structure.schema}`,
+        `Basis: ${result.manifest.structure.basis}`,
       ]);
       return EXIT.ok;
     },

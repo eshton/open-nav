@@ -34,6 +34,7 @@ const FILES: Record<string, string> = {
 
 async function cli(argv: string[], options: { env?: Record<string, string> } = {}) {
   const writer = capture();
+  const written = new Map<string, string>();
   const code = await run({
     argv,
     writer,
@@ -44,10 +45,12 @@ async function cli(argv: string[], options: { env?: Record<string, string> } = {
       if (contents === undefined) throw new Error(`ENOENT: ${path}`);
       return contents;
     },
+    writeFile: (path, contents) => written.set(path, contents),
   });
   return {
     code,
     writer,
+    written,
     json: () => JSON.parse(writer.stdout.join('\n')) as Record<string, unknown>,
   };
 }
@@ -287,5 +290,75 @@ describe('help', () => {
     const { code, writer } = await cli(['validate', 'good.xml', '--nope']);
     expect(code).toBe(EXIT.usage);
     expect(writer.stderr.join('\n')).toMatch(/--nope/);
+  });
+});
+
+describe('render', () => {
+  it('writes a self-contained HTML document', async () => {
+    const { code, written } = await cli(['render', 'good.xml', '--out', 'out/invoice.html']);
+    expect(code).toBe(EXIT.ok);
+    const html = written.get('out/invoice.html')!;
+    expect(html.startsWith('<!doctype html>')).toBe(true);
+    expect(html).toContain('Értékesítő Kft');
+    expect(html).not.toMatch(/<script/i);
+  });
+
+  it('writes to standard output when no file is given, so it can be piped', async () => {
+    const { code, writer } = await cli(['render', 'good.xml']);
+    expect(code).toBe(EXIT.ok);
+    expect(writer.stdout.join('\n')).toContain('<!doctype html>');
+  });
+
+  it('renders in English on request', async () => {
+    const { written } = await cli(['render', 'good.xml', '--out', 'a.html', '--language', 'en']);
+    expect(written.get('a.html')).toContain('Supplier');
+  });
+
+  it('rejects an unsupported language', async () => {
+    const { code } = await cli(['render', 'good.xml', '--language', 'de']);
+    expect(code).toBe(EXIT.usage);
+  });
+
+  it('needs no credentials', async () => {
+    const { code } = await cli(['render', 'good.xml', '--out', 'a.html'], { env: {} });
+    expect(code).toBe(EXIT.ok);
+  });
+});
+
+describe('export', () => {
+  it('writes one XML per invoice plus a manifest', async () => {
+    const { code, written, json } = await cli([
+      'export',
+      'good.xml',
+      'simplified.xml',
+      '--out',
+      'export',
+    ]);
+    expect(code).toBe(EXIT.ok);
+    expect([...written.keys()].filter((name) => name.endsWith('.xml'))).toHaveLength(2);
+    expect(written.has('export/manifest.json')).toBe(true);
+
+    const data = json()['data'] as { exported: number; structure: { basis: string } };
+    expect(data.exported).toBe(2);
+    expect(data.structure.basis).toContain('13/A');
+  });
+
+  it('honours a date range', async () => {
+    const { json } = await cli(['export', 'good.xml', '--out', 'export', '--from', '2030-01-01']);
+    expect((json()['data'] as { exported: number }).exported).toBe(0);
+  });
+
+  it('requires an output directory', async () => {
+    const { code, json } = await cli(['export', 'good.xml']);
+    expect(code).toBe(EXIT.usage);
+    expect((json()['error'] as { message: string }).message).toContain('--out');
+  });
+
+  it('records a checksum for every exported file', async () => {
+    const { written } = await cli(['export', 'good.xml', '--out', 'export']);
+    const manifest = JSON.parse(written.get('export/manifest.json')!) as {
+      invoices: Array<{ sha256: string }>;
+    };
+    expect(manifest.invoices[0]?.sha256).toMatch(/^[0-9a-f]{64}$/);
   });
 });

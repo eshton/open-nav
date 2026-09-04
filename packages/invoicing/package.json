@@ -1,0 +1,37 @@
+{
+  "name": "@open-nav/invoicing",
+  "version": "0.1.0",
+  "description": "Render Hungarian invoices as printable documents, and produce the tax authority data export",
+  "keywords": [
+    "nav",
+    "onlineszamla",
+    "hungary",
+    "invoice",
+    "szamla",
+    "adatexport",
+    "pdf"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@open-nav/core": "workspace:^"
+  }
+}

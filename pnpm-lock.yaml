@@ -29,6 +29,9 @@ importers:
       '@open-nav/core':
         specifier: workspace:^
         version: link:../core
+      '@open-nav/invoicing':
+        specifier: workspace:^
+        version: link:../invoicing
 
   packages/client:
     dependencies:
@@ -47,6 +50,12 @@ importers:
       fast-xml-parser:
         specifier: ^4.5.1
         version: 4.5.7
+
+  packages/invoicing:
+    dependencies:
+      '@open-nav/core':
+        specifier: workspace:^
+        version: link:../core
 
   packages/mock-server:
     dependencies:
