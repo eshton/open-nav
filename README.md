@@ -335,6 +335,34 @@ does not pull in either.
 Every package ships its TypeScript sources next to the compiled output, so
 stepping into this code in a debugger lands in the real source.
 
+### From CommonJS
+
+The packages are ESM-only, so a top-level `require('@open-nav/core')` throws
+`ERR_REQUIRE_ESM`. Reach them from CommonJS with a dynamic `import()`, which
+returns a promise for the module:
+
+```cjs
+async function main() {
+  const { validateInvoice } = await import('@open-nav/core');
+  const { NavClient } = await import('@open-nav/client');
+  // ...
+}
+
+main();
+```
+
+Two notes:
+
+- **TypeScript** emitting CommonJS must use `module: "nodenext"` (or `"node16"`),
+  or it rewrites the `import()` back into a `require()` and the error returns.
+- **Recent Node** (20.19+ / 22.12+) can `require()` an ESM module directly, so
+  on those versions the bridge above is optional; below them it is required.
+
+ESM-only is deliberate, and revisited as the ecosystem moves: a dual
+ESM/CommonJS build would double the compiled output and the test surface for a
+shrinking audience, and the `await import(...)` bridge covers the CommonJS
+case. See [RELEASING.md](RELEASING.md#deliberate-choices).
+
 ## Working on it
 
 pnpm 10, and:
