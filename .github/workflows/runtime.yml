@@ -1,0 +1,56 @@
+name: Runtime crypto
+
+# The crypto provider abstraction exists so the library runs where node:crypto
+# lacks SHA-3. This job proves the Web provider (noble + WebCrypto) actually
+# works on the non-Node runtimes we claim to support, by running a shared smoke
+# test under each one. Node is included as the control.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        runtime: [node, bun, deno]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.x'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The smoke imports @open-nav/core's built output.
+      - run: pnpm build
+
+      - if: matrix.runtime == 'bun'
+        uses: oven-sh/setup-bun@v2
+
+      - if: matrix.runtime == 'deno'
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Run the crypto smoke test on ${{ matrix.runtime }}
+        run: |
+          case "${{ matrix.runtime }}" in
+            node) node scripts/crypto-smoke.mjs ;;
+            bun)  bun scripts/crypto-smoke.mjs ;;
+            deno) deno run --allow-read --allow-env scripts/crypto-smoke.mjs ;;
+          esac
