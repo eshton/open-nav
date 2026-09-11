@@ -54,3 +54,21 @@ jobs:
             bun)  bun scripts/crypto-smoke.mjs ;;
             deno) deno run --allow-read --allow-env scripts/crypto-smoke.mjs ;;
           esac
+
+  # workerd is the runtime the Web provider was built for: its node:crypto has
+  # no SHA-3. This runs the crypto tests inside it via vitest-pool-workers.
+  workers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.x'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm test:workers
