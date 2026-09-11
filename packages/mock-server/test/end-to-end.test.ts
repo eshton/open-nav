@@ -259,6 +259,46 @@ describe('queries', () => {
     expect(response.taxpayerValidity).toBe(false);
   });
 
+  it('recovers from a throttle by retrying', async () => {
+    // NAV answers 429/503 when the taxpayer is over its rate limit; the client
+    // must back off and retry rather than fail. retryAfterSeconds 0 keeps the
+    // test fast while still driving the Retry-After path.
+    const mock = await start({
+      taxpayers: [{ taxNumber: '99887764', name: 'Beszerző Kft', valid: true }],
+      throttle: { times: 2, status: 429, retryAfterSeconds: 0 },
+    });
+    const client = new NavClient({
+      credentials: CREDENTIALS,
+      software: SOFTWARE,
+      baseUrl: mock.url,
+      transport: { retries: 3 },
+    });
+
+    const response = await client.queryTaxpayer({ taxNumber: '99887764' });
+
+    expect(response.taxpayerValidity).toBe(true);
+    expect(mock.state.throttled).toBe(2);
+    // The two throttled attempts never reached a handler, so only the third,
+    // successful request was recorded.
+    expect(mock.state.requests).toHaveLength(1);
+  });
+
+  it('surfaces the throttle once retries are exhausted', async () => {
+    const mock = await start({ throttle: { times: 5, status: 503, retryAfterSeconds: 0 } });
+    const client = new NavClient({
+      credentials: CREDENTIALS,
+      software: SOFTWARE,
+      baseUrl: mock.url,
+      transport: { retries: 1 },
+    });
+
+    await expect(client.queryTaxpayer({ taxNumber: '12345678' })).rejects.toBeInstanceOf(
+      NavApiError,
+    );
+    // One initial attempt plus one retry, both throttled, then it gives up.
+    expect(mock.state.throttled).toBe(2);
+  });
+
   it('lists submitted invoices in a date range', async () => {
     const mock = await start();
     const client = clientFor(mock);
