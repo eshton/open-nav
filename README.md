@@ -273,13 +273,16 @@ before deciding what to fetch in full.
 claude mcp add open-nav -- npx -y @open-nav/mcp
 ```
 
-Four tools need no credentials — validate an invoice, explain a NAV fault
-code, render a document, build the data export — and five more appear once
-credentials are configured. Tools that cannot work are not registered, so an
-agent is never offered one that is guaranteed to fail; a validation failure
-comes back as a result rather than an error, because the fault list is the
-answer; and credentials are read from the environment, never taken as tool
-arguments that would pass through a transcript.
+Five tools need no credentials — validate an invoice, compute its VAT
+summary, explain a NAV fault code, render a document, build the data export —
+and five more appear once credentials are configured. Two resources —
+`nav://faults` and `nav://interface-errors` — carry NAV's full error
+catalogues, so an agent can read the whole fault space without a tool call.
+Tools that cannot work are not registered, so an agent is never offered one
+that is guaranteed to fail; a validation failure comes back as a result rather
+than an error, because the fault list is the answer; and credentials are read
+from the environment, never taken as tool arguments that would pass through a
+transcript.
 
 ## Testing without credentials
 
