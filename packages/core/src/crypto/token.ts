@@ -1,7 +1,28 @@
-import { createDecipheriv } from 'node:crypto';
+import { getCryptoProvider } from './provider.js';
 import { NavValidationError } from '../errors.js';
 
 const EXCHANGE_KEY_LENGTH = 16;
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
+/** Decode a base64 string to bytes on any runtime (no Node Buffer). */
+function base64ToBytes(base64: string): Uint8Array {
+  let binary: string;
+  try {
+    binary = atob(base64);
+  } catch {
+    throw new NavValidationError('Invalid encoded exchange token', [
+      {
+        path: 'encodedExchangeToken',
+        code: 'EXCHANGE_TOKEN_LENGTH',
+        message: 'not valid base64',
+      },
+    ]);
+  }
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
 
 /**
  * Decrypt the `encodedExchangeToken` returned by `tokenExchange`.
@@ -16,17 +37,21 @@ const EXCHANGE_KEY_LENGTH = 16;
  * @param exchangeKey  16 character exchange key of the technical user
  */
 export function decodeExchangeToken(encodedToken: string, exchangeKey: string): string {
-  if (exchangeKey.length !== EXCHANGE_KEY_LENGTH) {
+  const keyBytes = encoder.encode(exchangeKey);
+  // AES-128 needs a 16-byte key. NAV keys are 16 ASCII characters, so char
+  // length and byte length coincide; guard on bytes so a non-ASCII key fails
+  // here with a NAV code rather than deep inside the cipher.
+  if (keyBytes.length !== EXCHANGE_KEY_LENGTH) {
     throw new NavValidationError('Invalid NAV exchange key', [
       {
         path: 'credentials.exchangeKey',
         code: 'EXCHANGE_KEY_LENGTH',
-        message: `must be exactly ${EXCHANGE_KEY_LENGTH} characters, got ${exchangeKey.length}`,
+        message: `must be exactly ${EXCHANGE_KEY_LENGTH} bytes, got ${keyBytes.length}`,
       },
     ]);
   }
 
-  const ciphertext = Buffer.from(encodedToken, 'base64');
+  const ciphertext = base64ToBytes(encodedToken);
   if (ciphertext.length === 0 || ciphertext.length % 16 !== 0) {
     throw new NavValidationError('Invalid encoded exchange token', [
       {
@@ -37,11 +62,9 @@ export function decodeExchangeToken(encodedToken: string, exchangeKey: string): 
     ]);
   }
 
-  const decipher = createDecipheriv('aes-128-ecb', Buffer.from(exchangeKey, 'utf8'), null);
-  decipher.setAutoPadding(false);
-  const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  const plaintext = getCryptoProvider().aes128EcbDecrypt(ciphertext, keyBytes);
 
-  return stripPkcs7(plaintext).toString('utf8');
+  return decoder.decode(stripPkcs7(plaintext));
 }
 
 /**
@@ -49,7 +72,7 @@ export function decodeExchangeToken(encodedToken: string, exchangeKey: string): 
  * NAV's unpadded tokens consist of printable ASCII, so a trailing byte in the
  * 1..16 range is an unambiguous padding marker.
  */
-function stripPkcs7(buffer: Buffer): Buffer {
+function stripPkcs7(buffer: Uint8Array): Uint8Array {
   const last = buffer.at(-1);
   if (last === undefined || last < 1 || last > 16 || last >= buffer.length) {
     return buffer;

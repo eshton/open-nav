@@ -69,6 +69,21 @@ describe('exchange token', () => {
       decodeExchangeToken(Buffer.from('abc').toString('base64'), exchangeKey),
     ).toThrowError(/block size/);
   });
+
+  it('rejects a malformed base64 payload with a NAV error', () => {
+    expect(() => decodeExchangeToken('!!!not base64!!!', exchangeKey)).toThrowError(
+      NavValidationError,
+    );
+  });
+
+  it('rejects a 16-character key that is not 16 bytes', () => {
+    // 16 UTF-16 code units, but 'é' is 2 UTF-8 bytes, so 17 bytes total.
+    const nonAsciiKey = '0123456789abcdéf';
+    expect(nonAsciiKey.length).toBe(16);
+    expect(() => decodeExchangeToken(encrypt('ABCDEFGHIJKLMNOP', false), nonAsciiKey)).toThrowError(
+      /must be exactly 16 bytes/,
+    );
+  });
 });
 
 describe('requestId', () => {

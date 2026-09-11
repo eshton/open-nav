@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { getCryptoProvider } from './provider.js';
 import { REQUEST_ID_MAX_LENGTH, REQUEST_ID_PATTERN } from '../constants.js';
 import { NavValidationError } from '../errors.js';
 
@@ -54,7 +54,7 @@ function assertRequestIdChars(value: string, path: string): void {
 }
 
 function randomChars(length: number): string {
-  const bytes = randomBytes(length);
+  const bytes = getCryptoProvider().randomBytes(length);
   let out = '';
   for (let i = 0; i < length; i += 1) {
     out += ALPHABET[bytes[i]! % ALPHABET.length];

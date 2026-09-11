@@ -28,10 +28,10 @@ export const REQUEST_VERSION = '3.0';
 export const HEADER_VERSION = '1.0';
 
 /** Base URL of the NAV production invoice service. */
-export const PRODUCTION_BASE_URL = 'https://api.onlineszamla.nav.gov.hu/invoiceService/v1';
+export const PRODUCTION_BASE_URL = 'https://api.onlineszamla.nav.gov.hu/invoiceService/v3';
 
 /** Base URL of the NAV test ("teszt") invoice service. */
-export const TEST_BASE_URL = 'https://api-test.onlineszamla.nav.gov.hu/invoiceService/v1';
+export const TEST_BASE_URL = 'https://api-test.onlineszamla.nav.gov.hu/invoiceService/v3';
 
 /** Well known NAV environments and their base URLs. */
 export const BASE_URLS = {

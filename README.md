@@ -316,18 +316,18 @@ npx @open-nav/cli --help
 npx @open-nav/mcp                             # speaks MCP over stdio
 ```
 
-Take only what you need: `@open-nav/core` has one dependency and no network
-access at all, so validating and building invoice data does not pull in a
-client, and rendering does not pull in either.
+Take only what you need: `@open-nav/core` has no network access at all, so
+validating and building invoice data does not pull in a client, and rendering
+does not pull in either.
 
-| Package                 | Depends on              | Third-party dependencies           |
-| ----------------------- | ----------------------- | ---------------------------------- |
-| `@open-nav/core`        | —                       | `fast-xml-parser`                  |
-| `@open-nav/client`      | core                    | none                               |
-| `@open-nav/invoicing`   | core                    | `pdfmake`                          |
-| `@open-nav/mock-server` | core                    | none                               |
-| `@open-nav/cli`         | core, client, invoicing | none                               |
-| `@open-nav/mcp`         | core, client, invoicing | `@modelcontextprotocol/sdk`, `zod` |
+| Package                 | Depends on              | Third-party dependencies                             |
+| ----------------------- | ----------------------- | ---------------------------------------------------- |
+| `@open-nav/core`        | —                       | `fast-xml-parser`, `@noble/hashes`, `@noble/ciphers` |
+| `@open-nav/client`      | core                    | none                                                 |
+| `@open-nav/invoicing`   | core                    | `pdfmake`                                            |
+| `@open-nav/mock-server` | core                    | none                                                 |
+| `@open-nav/cli`         | core, client, invoicing | none                                                 |
+| `@open-nav/mcp`         | core, client, invoicing | `@modelcontextprotocol/sdk`, `zod`                   |
 
 Every package ships its TypeScript sources next to the compiled output, so
 stepping into this code in a debugger lands in the real source.

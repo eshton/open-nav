@@ -1,13 +1,21 @@
-import { createHash } from 'node:crypto';
+import { getCryptoProvider } from './provider.js';
+
+const encoder = new TextEncoder();
+
+function toHexUpper(bytes: Uint8Array): string {
+  let out = '';
+  for (const byte of bytes) out += byte.toString(16).padStart(2, '0');
+  return out.toUpperCase();
+}
 
 /** Uppercase hexadecimal SHA-512 digest of a UTF-8 string. */
 export function sha512(value: string): string {
-  return createHash('sha512').update(value, 'utf8').digest('hex').toUpperCase();
+  return toHexUpper(getCryptoProvider().sha512(encoder.encode(value)));
 }
 
 /** Uppercase hexadecimal SHA3-512 digest of a UTF-8 string. */
 export function sha3_512(value: string): string {
-  return createHash('sha3-512').update(value, 'utf8').digest('hex').toUpperCase();
+  return toHexUpper(getCryptoProvider().sha3_512(encoder.encode(value)));
 }
 
 /**
