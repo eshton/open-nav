@@ -14,6 +14,6 @@
     "generate": "node dist/main.js"
   },
   "dependencies": {
-    "fast-xml-parser": "^4.5.1"
+    "fast-xml-parser": "^5.7.0"
   }
 }
