@@ -29,6 +29,21 @@ export interface MockServerOptions {
   pollsBeforeDone?: number;
   /** Validate submitted invoices and abort the invalid ones. Default true. */
   validate?: boolean;
+  /**
+   * Turn away the first N HTTP requests with a throttle response, so a client's
+   * retry and backoff can be exercised end to end. NAV rate limits per
+   * taxpayer, and a bulk download makes one request per invoice, so recovering
+   * from a throttle is the difference between a pull that finishes and one that
+   * dies partway.
+   */
+  throttle?: {
+    /** How many requests to turn away before serving normally. */
+    times: number;
+    /** Status to answer with. 429 (Too Many Requests) by default; 503 also retried. */
+    status?: 429 | 503;
+    /** Seconds to advertise in a `Retry-After` header, if any. */
+    retryAfterSeconds?: number;
+  };
   /** Injectable clock. */
   now?: () => Date;
 }
@@ -67,11 +82,28 @@ export async function startMockServer(options: MockServerOptions): Promise<MockS
     now: options.now ?? (() => new Date()),
   };
 
+  let throttleRemaining = options.throttle?.times ?? 0;
+
   const server = createServer((request, response) => {
     const chunks: Buffer[] = [];
     request.on('data', (chunk: Buffer) => chunks.push(chunk));
     request.on('end', () => {
       const body = Buffer.concat(chunks).toString('utf8');
+
+      if (throttleRemaining > 0) {
+        throttleRemaining -= 1;
+        state.throttled += 1;
+        const headers: Record<string, string> = {
+          'content-type': 'application/xml; charset=utf-8',
+        };
+        if (options.throttle?.retryAfterSeconds !== undefined) {
+          headers['retry-after'] = String(options.throttle.retryAfterSeconds);
+        }
+        response.writeHead(options.throttle?.status ?? 429, headers);
+        response.end(errorResponse(config, 'RATE_LIMITED', 'request limit exceeded, retry later'));
+        return;
+      }
+
       const { status, body: responseBody } = dispatch(
         request.method ?? '',
         request.url ?? '',

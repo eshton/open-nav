@@ -21,6 +21,8 @@ export interface MockState {
   taxpayers: Map<string, MockTaxpayer>;
   /** Requests received, newest last, for assertions. */
   requests: Array<{ operation: string; requestId: string; body: string }>;
+  /** HTTP requests turned away by the throttle, for assertions. */
+  throttled: number;
 }
 
 export interface StoredInvoice {
@@ -76,5 +78,6 @@ export function createState(taxpayers: MockTaxpayer[] = []): MockState {
     tokens: new Map(),
     taxpayers: new Map(taxpayers.map((taxpayer) => [taxpayer.taxNumber, taxpayer])),
     requests: [],
+    throttled: 0,
   };
 }
