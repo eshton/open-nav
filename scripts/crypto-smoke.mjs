@@ -7,7 +7,6 @@
 // workerd, proving the claim rather than asserting it.
 
 import {
-  createWebCryptoProvider,
   setCryptoProvider,
   getCryptoProvider,
   nodeCryptoProvider,
@@ -18,6 +17,7 @@ import {
   createRequestId,
   assertRequestId,
 } from '../packages/core/dist/index.js';
+import { createWebCryptoProvider } from '../packages/core/dist/web.js';
 
 const failures = [];
 const check = (name, actual, expected) => {

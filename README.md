@@ -335,6 +335,23 @@ does not pull in either.
 Every package ships its TypeScript sources next to the compiled output, so
 stepping into this code in a debugger lands in the real source.
 
+`@noble/hashes` and `@noble/ciphers` back the Web crypto provider, which lives
+at a separate `@open-nav/core/web` entry point — so a Node, Bun or Deno
+consumer, whose `node:crypto` already covers everything, imports `@open-nav/core`
+without any `@noble/*` code reaching its bundle.
+
+### On Cloudflare Workers
+
+workerd's `node:crypto` has no SHA-3, so install the Web provider once at
+startup, before any request:
+
+```ts
+import { setCryptoProvider } from '@open-nav/core';
+import { createWebCryptoProvider } from '@open-nav/core/web';
+
+setCryptoProvider(createWebCryptoProvider());
+```
+
 ### From CommonJS
 
 The packages are ESM-only, so a top-level `require('@open-nav/core')` throws

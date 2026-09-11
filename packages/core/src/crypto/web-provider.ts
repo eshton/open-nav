@@ -14,7 +14,8 @@ import type { CryptoProvider } from './provider.js';
  *
  * @example
  * ```ts
- * import { setCryptoProvider, createWebCryptoProvider } from '@open-nav/core';
+ * import { setCryptoProvider } from '@open-nav/core';
+ * import { createWebCryptoProvider } from '@open-nav/core/web';
  * setCryptoProvider(createWebCryptoProvider());
  * ```
  */
