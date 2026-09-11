@@ -33,6 +33,21 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)
 
+  examples:
+    dependencies:
+      '@open-nav/client':
+        specifier: workspace:*
+        version: link:../packages/client
+      '@open-nav/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@open-nav/invoicing':
+        specifier: workspace:*
+        version: link:../packages/invoicing
+      '@open-nav/mock-server':
+        specifier: workspace:*
+        version: link:../packages/mock-server
+
   packages/cli:
     dependencies:
       '@open-nav/client':

@@ -1,0 +1,16 @@
+{
+  "name": "@open-nav/examples",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Runnable end-to-end examples. Not published.",
+  "scripts": {
+    "report": "node report-invoice.mjs"
+  },
+  "dependencies": {
+    "@open-nav/client": "workspace:*",
+    "@open-nav/core": "workspace:*",
+    "@open-nav/invoicing": "workspace:*",
+    "@open-nav/mock-server": "workspace:*"
+  }
+}

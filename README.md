@@ -431,6 +431,12 @@ invoice **once** and both sends and hashes that same base64 (hashing a
 separately serialised copy is a signature failure waiting to happen), and
 never retries a submission that reached NAV.
 
+## Examples
+
+[`examples/report-invoice.mjs`](examples/README.md) is the whole round trip in
+one runnable file — validate, report, poll, render — against the bundled mock,
+so `node examples/report-invoice.mjs` works with no credentials.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports that include the NAV error

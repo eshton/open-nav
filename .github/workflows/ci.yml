@@ -44,3 +44,8 @@ jobs:
       # The published tarballs, not the source tree: `files`, the export maps
       # and the workspace: rewriting only take effect at pack time.
       - run: pnpm check:packages
+
+      # The end-to-end example doubles as an integration smoke test across
+      # core, client, invoicing and the mock service. check:packages built the
+      # dist it imports.
+      - run: node examples/report-invoice.mjs
