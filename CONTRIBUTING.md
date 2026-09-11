@@ -17,6 +17,13 @@ its own, so a schema change is never mixed into a behavioural change.
 **Do not hand-write generated code.** Types and schema metadata are derived
 from the XSDs. Change the generator, not its output.
 
+**Do not "fix" the six sample invoices that fail to reconcile.** Six of NAV's
+thirty sample invoices contradict their own totals; the mismatches are errors
+in NAV's examples, not in this library. They are documented in
+[`conformance/known-issues.md`](conformance/known-issues.md) and pinned in
+`packages/core/test/summary.test.ts`. If your change makes the summary rules
+accept them, the change is wrong, not the test.
+
 ## Getting set up
 
 ```sh

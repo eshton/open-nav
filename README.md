@@ -109,7 +109,7 @@ Being explicit, because it matters for anyone considering this in production:
 | Request signature construction | Verified against all 11 of NAV's official request samples, and re-verified end to end by an independent implementation in the mock service                                   |
 | Schema round trip              | Verified against all 41 official NAV sample documents                                                                                                                        |
 | Schema validation              | Accepts all 41 official documents; every facet kind covered by tests                                                                                                         |
-| Business rules                 | 24 of NAV's 30 sample invoices pass with no findings; the other 6 raise only the arithmetic faults that are wrong upstream                                                   |
+| Business rules                 | 24 of NAV's 30 sample invoices pass with no findings; the other 6 raise only the arithmetic faults that are [wrong upstream](conformance/known-issues.md)                    |
 | Summary reconciliation         | Reproduces the summaries of those same 24 samples                                                                                                                            |
 | Client, end to end             | The real client drives the mock service over HTTP: token exchange, batch submission, polling and every query                                                                 |
 | Invoice document               | All 30 samples render as HTML and as PDF through the native engine; the PDF's own ToUnicode maps are asserted to carry `ő` and `ű`, and its text was extracted and read back |
