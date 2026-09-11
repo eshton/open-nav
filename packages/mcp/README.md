@@ -37,11 +37,12 @@ Same variables as the CLI, so one configuration serves both.
 
 ## Tools
 
-Four work with no credentials at all:
+Five work with no credentials at all:
 
 | Tool                | What it does                                                                             |
 | ------------------- | ---------------------------------------------------------------------------------------- |
 | `validate_invoice`  | Check invoice data against the schema and the business rules, with NAV's own fault codes |
+| `compute_summary`   | Derive the VAT-rate summary and totals from the lines, and flag any mismatch             |
 | `lookup_fault_code` | Explain a NAV fault code in NAV's words, in `hu`, `en` or `de`                           |
 | `render_invoice`    | Render a printable invoice, with the phrases the VAT Act requires                        |
 | `export_invoices`   | Build the data export required by decree 23/2014. (VI. 30.) NGM                          |
@@ -55,6 +56,17 @@ Five more appear once credentials are configured:
 | `transaction_status` | The verdict on a submission, optionally waiting for it |
 | `list_invoices`      | Invoices issued by you or to you, in a date range      |
 | `get_invoice`        | One invoice in full, as reported                       |
+
+## Resources
+
+Two resources carry NAV's error catalogues as JSON, so an agent can read the
+whole space of faults without a tool call. Both are available with no
+credentials.
+
+| Resource                 | What it is                                                                                    |
+| ------------------------ | --------------------------------------------------------------------------------------------- |
+| `nav://faults`           | Every validation fault code, with NAV's `en`, `hu` and `de` wording                           |
+| `nav://interface-errors` | Every interface-level error code (auth, malformed request, throttling), with the same wording |
 
 ## Decisions that matter for an agent
 

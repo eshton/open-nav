@@ -64,6 +64,7 @@ describe('tool discovery', () => {
     const client = await connect();
     const names = (await client.listTools()).tools.map((tool) => tool.name).sort();
     expect(names).toEqual([
+      'compute_summary',
       'export_invoices',
       'lookup_fault_code',
       'render_invoice',
@@ -83,6 +84,7 @@ describe('tool discovery', () => {
     const client = await connect({ credentials: CREDENTIALS, software: SOFTWARE });
     const names = (await client.listTools()).tools.map((tool) => tool.name).sort();
     expect(names).toEqual([
+      'compute_summary',
       'export_invoices',
       'get_invoice',
       'list_invoices',
@@ -106,6 +108,49 @@ describe('tool discovery', () => {
     expect(submit?.annotations?.readOnlyHint).toBe(false);
     const validate = tools.find((tool) => tool.name === 'validate_invoice');
     expect(validate?.annotations?.readOnlyHint).toBe(true);
+  });
+});
+
+describe('reference resources', () => {
+  it('offers the fault and interface-error catalogues with no configuration', async () => {
+    const client = await connect();
+    const uris = (await client.listResources()).resources.map((resource) => resource.uri).sort();
+    expect(uris).toEqual(['nav://faults', 'nav://interface-errors']);
+  });
+
+  it('serves the full fault catalogue as JSON', async () => {
+    const client = await connect();
+    const read = await client.readResource({ uri: 'nav://faults' });
+    const catalogue = JSON.parse(read.contents[0]!.text as string) as Record<
+      string,
+      { en: string; hu: string; de: string }
+    >;
+    expect(catalogue.ANNULMENT_IN_PROGRESS?.en).toContain('technical annulment');
+    expect(Object.keys(catalogue).length).toBeGreaterThan(100);
+  });
+});
+
+describe('compute_summary', () => {
+  it('computes a summary that reconciles for a self-consistent invoice', async () => {
+    const client = await connect();
+    const result = await client.callTool({
+      name: 'compute_summary',
+      arguments: { xml: sampleXml() },
+    });
+    const data = payload(result) as { reconciles: boolean; mismatches: unknown[] };
+    expect(data.reconciles).toBe(true);
+    expect(data.mismatches).toEqual([]);
+  });
+
+  it('reports the mismatch on a sample NAV itself gets wrong', async () => {
+    const client = await connect();
+    const result = await client.callTool({
+      name: 'compute_summary',
+      arguments: { xml: sampleXml('termekdijas-szamla.xml') },
+    });
+    const data = payload(result) as { reconciles: boolean; mismatches: Array<{ code: string }> };
+    expect(data.reconciles).toBe(false);
+    expect(data.mismatches.length).toBeGreaterThan(0);
   });
 });
 

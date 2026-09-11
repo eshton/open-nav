@@ -2,6 +2,10 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import {
   NavApiError,
+  NAV_FAULT_MESSAGES,
+  NAV_INTERFACE_MESSAGES,
+  checkInvoiceSummary,
+  computeInvoiceSummary,
   decodeInvoiceData,
   faultMessage,
   parseDocument,
@@ -89,6 +93,7 @@ function parseInvoice(xml: string): InvoiceData {
 
 export function createNavMcpServer(options: NavMcpOptions = {}): McpServer {
   const server = new McpServer({ name: 'open-nav', version: VERSION });
+  registerResources(server);
   registerOfflineTools(server);
   if (options.credentials && options.software) {
     registerOnlineTools(server, {
@@ -98,6 +103,52 @@ export function createNavMcpServer(options: NavMcpOptions = {}): McpServer {
     });
   }
   return server;
+}
+
+/**
+ * Reference data an agent can read directly, without spending a tool call.
+ *
+ * NAV's fault and interface-error catalogues are static and finite, so they
+ * are better read once as a resource than looked up code by code.
+ */
+function registerResources(server: McpServer): void {
+  const jsonResource = (
+    name: string,
+    uri: string,
+    title: string,
+    description: string,
+    value: unknown,
+  ): void => {
+    server.registerResource(
+      name,
+      uri,
+      { title, description, mimeType: 'application/json' },
+      async (url) => ({
+        contents: [
+          { uri: url.href, mimeType: 'application/json', text: JSON.stringify(value, null, 2) },
+        ],
+      }),
+    );
+  };
+
+  jsonResource(
+    'nav-fault-catalogue',
+    'nav://faults',
+    'NAV validation fault catalogue',
+    "Every validation fault code NAV can report against an invoice, with NAV's own " +
+      'English, Hungarian and German wording. Read this to interpret a rejection or to see ' +
+      'the full space of faults.',
+    NAV_FAULT_MESSAGES,
+  );
+
+  jsonResource(
+    'nav-interface-error-catalogue',
+    'nav://interface-errors',
+    'NAV interface error catalogue',
+    'Every interface-level error code NAV can return (malformed request, authentication, ' +
+      'rate limiting and the like), with its English, Hungarian and German wording.',
+    NAV_INTERFACE_MESSAGES,
+  );
 }
 
 /** Tools that contact nothing and need no credentials. */
@@ -218,6 +269,39 @@ function registerOfflineTools(server: McpServer): void {
         return result({
           manifest: exported.manifest,
           files: exported.files,
+        });
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    'compute_summary',
+    {
+      title: 'Compute the invoice VAT summary',
+      description:
+        'Derive the VAT-rate summary and invoice totals from the lines of NAV invoice data, ' +
+        'the way NAV expects them, and report any place where a stated summary disagrees with ' +
+        'the lines. Use this while building an invoice to get the summary right before ' +
+        'submitting — a one-forint mismatch rejects the whole batch. Needs no credentials.',
+      inputSchema: {
+        xml: z.string().describe('The InvoiceData XML document'),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async ({ xml }) => {
+      try {
+        const invoice = parseInvoice(xml).invoiceMain.invoice;
+        if (!invoice) {
+          return failure(new Error('The document carries no single invoice to summarise'));
+        }
+        const summary = computeInvoiceSummary(invoice);
+        const mismatches = checkInvoiceSummary(invoice);
+        return result({
+          summary,
+          reconciles: mismatches.length === 0,
+          mismatches,
         });
       } catch (error) {
         return failure(error);
