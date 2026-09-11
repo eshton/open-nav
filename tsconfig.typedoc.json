@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true
+  },
+  "include": ["packages/*/src/**/*.ts"],
+  "exclude": ["**/*.test.ts", "**/test/**", "packages/*/dist/**"]
+}

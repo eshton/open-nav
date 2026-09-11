@@ -1,0 +1,23 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "open-nav",
+  "entryPoints": [
+    "packages/core/src/index.ts",
+    "packages/client/src/index.ts",
+    "packages/invoicing/src/index.ts",
+    "packages/mock-server/src/index.ts",
+    "packages/mcp/src/index.ts"
+  ],
+  "tsconfig": "tsconfig.typedoc.json",
+  "out": "docs-site",
+  "readme": "README.md",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "categorizeByGroup": true,
+  "navigationLinks": {
+    "GitHub": "https://github.com/eshton/open-nav",
+    "npm": "https://www.npmjs.com/org/open-nav"
+  },
+  "gitRevision": "main"
+}

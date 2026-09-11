@@ -10,6 +10,9 @@ NAV accepts, reporting it, and pulling invoices issued to you.
 > nothing here has been exercised against NAV's live test system yet — see
 > [Verification status](#verification-status).
 
+📖 **API reference:** [eshton.github.io/open-nav](https://eshton.github.io/open-nav/) —
+generated from the source with TypeDoc.
+
 _[Magyar összefoglaló a lap alján.](#magyarul)_
 
 ## Why

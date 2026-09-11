@@ -19,6 +19,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "verify": "pnpm format:check && pnpm licences && pnpm typecheck && pnpm test && pnpm check:packages",
+    "docs": "pnpm build && typedoc",
     "codegen": "tsc -b packages/codegen && node packages/codegen/dist/main.js && prettier --write --log-level warn packages/core/src/generated",
     "codegen:check": "pnpm codegen && git diff --exit-code -- packages/core/src/generated",
     "licences": "node scripts/check-licences.mjs",
@@ -34,6 +35,7 @@
     "fast-check": "^4.10.0",
     "prettier": "^3.4.2",
     "publint": "^0.3.24",
+    "typedoc": "^0.28.20",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   },
