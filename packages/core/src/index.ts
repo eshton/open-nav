@@ -3,7 +3,8 @@ export * from './errors.js';
 export * from './time.js';
 export * from './crypto/provider.js';
 export * from './crypto/node-provider.js';
-export * from './crypto/web-provider.js';
+// The Web provider lives at the `@open-nav/core/web` entry (see ./web.ts), so
+// the main entry stays free of any @noble/* code for Node/Bun/Deno consumers.
 export * from './crypto/hash.js';
 export * from './crypto/signature.js';
 export * from './crypto/token.js';
