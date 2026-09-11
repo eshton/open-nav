@@ -10,3 +10,4 @@ coverage/
 .idea/
 .vscode/
 dist-packages/
+docs-site/
