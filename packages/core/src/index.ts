@@ -13,6 +13,7 @@ export * from './xml/descriptor.js';
 export * from './xml/read.js';
 export * from './xml/write.js';
 export * from './invoice/payload.js';
+export * from './invoice/build.js';
 export * from './money/decimal.js';
 export * from './money/summary.js';
 export * from './validation/issue.js';

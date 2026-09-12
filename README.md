@@ -120,6 +120,52 @@ Being explicit, because it matters for anyone considering this in production:
 | Published packages             | Every tarball passes `publint` and `attw`, and all six were installed from tarballs into a clean project and exercised end to end                                            |
 | Live NAV test system           | **Not yet exercised** — no technical user credentials                                                                                                                        |
 
+## Building an invoice
+
+The `InvoiceData` type is faithful to NAV's schema, which means constructing one
+by hand is a lot of nested objects. For the ordinary case — a normal invoice
+with priced lines — `buildInvoice` takes a flat input and fills in the rest,
+computing each line's net, VAT and gross and the whole summary so the
+arithmetic reconciles:
+
+```ts
+import { buildInvoice, validateInvoice } from '@open-nav/core';
+
+const invoice = buildInvoice({
+  invoiceNumber: 'A-2026-001',
+  issueDate: '2026-03-01',
+  supplier: {
+    name: 'My Company Kft',
+    taxNumber: '12345678',
+    address: {
+      postalCode: '1011',
+      city: 'Budapest',
+      streetName: 'Fő',
+      publicPlaceCategory: 'utca',
+      number: '1',
+    },
+  },
+  customer: {
+    name: 'Buyer Kft',
+    taxNumber: '98765432',
+    address: {
+      postalCode: '7600',
+      city: 'Pécs',
+      streetName: 'Rákóczi',
+      publicPlaceCategory: 'út',
+      number: '2',
+    },
+  },
+  lines: [{ description: 'Widget', quantity: 10, unitPrice: 1000, vatPercentage: 0.27 }],
+});
+
+const report = validateInvoice(invoice, { operation: 'CREATE' });
+```
+
+It covers the common invoice, not the whole schema — no aggregate or simplified
+invoices, product-fee lines or margin schemes. It returns the plain
+`InvoiceData`, so anything it does not cover you set on the result yourself.
+
 ## Validating before you send
 
 Local validation is the point of the library, not a sideline. Two layers run:
