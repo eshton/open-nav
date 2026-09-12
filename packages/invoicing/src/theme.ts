@@ -21,6 +21,15 @@ export interface InvoiceTheme {
   /** Rules and borders. */
   borderColor?: string;
 
+  /**
+   * Layout template — a structural choice above colours and fonts.
+   *
+   * `standard` (the default) is the roomy layout. `compact` tightens the
+   * spacing and type scale to fit more on a page, for a dense invoice or a
+   * short receipt. Both honour every other theme field.
+   */
+  template?: 'standard' | 'compact';
+
   /** CSS font stack. Give a real fallback chain; a PDF converter needs it. */
   fontFamily?: string;
   /** Base size, as a CSS length. Everything else scales from it. */
@@ -69,6 +78,7 @@ export interface ResolvedTheme extends Required<Omit<InvoiceTheme, 'logo' | 'cus
 }
 
 export const DEFAULT_THEME: ResolvedTheme = {
+  template: 'standard',
   accentColor: '#16181d',
   inkColor: '#16181d',
   mutedColor: '#5b6270',
@@ -131,6 +141,13 @@ export function resolveTheme(theme: InvoiceTheme = {}): ResolvedTheme {
   merged.pageMargin = check(merged.pageMargin, LENGTH_LIST, 'pageMargin', 'a CSS length');
   merged.pageSize = check(merged.pageSize, PAGE_SIZE, 'pageSize', 'a CSS page size');
   merged.fontFamily = check(merged.fontFamily, FONT_STACK, 'fontFamily', 'a CSS font stack');
+
+  if (merged.template !== 'standard' && merged.template !== 'compact') {
+    throw new ThemeError(
+      `theme.template: ${JSON.stringify(merged.template)} is not a template. ` +
+        `Use "standard" or "compact".`,
+    );
+  }
 
   if (merged.logo) {
     const src = merged.logo.src.trim();
@@ -302,5 +319,23 @@ export function buildStyles(theme: ResolvedTheme): string {
     border-top: 1px solid var(--rule); padding-top: 2mm;
   }
   footer div { margin-bottom: 0.8mm; }
-${theme.customCss ? `\n  /* customCss */\n${theme.customCss}\n` : ''}</style>`;
+${theme.template === 'compact' ? COMPACT_CSS : ''}${theme.customCss ? `\n  /* customCss */\n${theme.customCss}\n` : ''}</style>`;
 }
+
+/**
+ * The compact template: the same document, tightened. Overrides come after the
+ * base rules so they win without touching them.
+ */
+const COMPACT_CSS = `
+  /* compact template */
+  body { line-height: 1.3; font-size: 0.92em; }
+  .invoice { padding: 4mm 0; }
+  h1 { font-size: 1.6em; }
+  .parties { margin: 4mm 0; }
+  .party { padding: 3mm; }
+  thead th, tbody td { padding: 1.2mm 1.5mm; }
+  .totals { margin-top: 3mm; }
+  .vat-summary, .markings { margin-top: 4mm; }
+  .markings { padding: 3mm; }
+  footer { margin-top: 5mm; }
+`;

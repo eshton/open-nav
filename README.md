@@ -254,10 +254,16 @@ a "not a tax invoice" note instead of the NAV-provenance line. In code:
 `documentType` option. (A _nyugta_'s own data reporting, where required, goes
 through NAV's online cash-register system, not this one.)
 
-Branding is a JSON theme: logo, palette, fonts, page size and margins, issuer
-contact lines, footer lines, and a `customCss` escape hatch. See
-[`examples/invoice-theme.json`](examples/invoice-theme.json). Theme values are
-validated rather than interpolated into the stylesheet, because a theme is
+**Language and layout.** `--language hu|en|de` (default `hu`) writes the whole
+document — including the VAT-Act phrases derived from the data — in that
+language, with the number and date conventions to match. `--template
+standard|compact` picks the layout: `compact` tightens the spacing and type
+scale to fit a dense invoice or a short receipt on less paper.
+
+Branding is a JSON theme: template, logo, palette, fonts, page size and
+margins, issuer contact lines, footer lines, and a `customCss` escape hatch.
+See [`examples/invoice-theme.json`](examples/invoice-theme.json). Theme values
+are validated rather than interpolated into the stylesheet, because a theme is
 still input.
 
 **No browser required.** `ő` and `ű` lie outside the encoding the PDF core

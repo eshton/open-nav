@@ -62,6 +62,7 @@ export async function run(options: RunOptions): Promise<ExitCode> {
         out: { type: 'string' },
         note: { type: 'string' },
         type: { type: 'string' },
+        template: { type: 'string' },
         pdf: { type: 'string' },
         theme: { type: 'string' },
         logo: { type: 'string' },

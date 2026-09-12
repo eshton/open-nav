@@ -1,6 +1,6 @@
 import { Decimal } from '@open-nav/core';
 
-export type DocumentLanguage = 'hu' | 'en';
+export type DocumentLanguage = 'hu' | 'en' | 'de';
 
 /**
  * Format an exact decimal for display without going through a JavaScript
@@ -20,9 +20,10 @@ export function formatAmount(
   const [whole = '0', fraction = ''] = text.split('.');
 
   // A non-breaking space, so a grouped amount never breaks across a line,
-  // which is the Hungarian typographic convention for thousands.
-  const groupSeparator = language === 'hu' ? '\u00a0' : ',';
-  const decimalSeparator = language === 'hu' ? ',' : '.';
+  // which is the Hungarian typographic convention for thousands. German groups
+  // with a dot and decimalises with a comma; English is the plain 1,234.56.
+  const groupSeparator = language === 'hu' ? '\u00a0' : language === 'de' ? '.' : ',';
+  const decimalSeparator = language === 'en' ? '.' : ',';
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, groupSeparator);
 
   const sign = amount.isNegative() ? '-' : '';
@@ -36,14 +37,17 @@ export function formatPercentage(value: string, language: DocumentLanguage): str
     .toString()
     .replace(/\.0+$/, '')
     .replace(/(\.\d*?)0+$/, '$1');
-  return `${language === 'hu' ? trimmed.replace('.', ',') : trimmed}%`;
+  // English uses a decimal point; Hungarian and German a comma.
+  return `${language === 'en' ? trimmed : trimmed.replace('.', ',')}%`;
 }
 
-/** Dates are ISO in the data; Hungarian documents write them with dots. */
+/** Dates are ISO in the data; Hungarian and German documents rewrite them. */
 export function formatDate(value: string, language: DocumentLanguage): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   if (language === 'en') return value;
   const [year, month, day] = value.split('-');
+  // German writes day-first with dots; Hungarian year-first with dots.
+  if (language === 'de') return `${day}.${month}.${year}.`;
   return `${year}. ${month}. ${day}.`;
 }
 

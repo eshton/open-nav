@@ -343,8 +343,31 @@ describe('render', () => {
     expect(written.get('a.html')).toContain('Supplier');
   });
 
+  it('renders in German on request', async () => {
+    const { written } = await cli(['render', 'good.xml', '--out', 'de.html', '--language', 'de']);
+    expect(written.get('de.html')).toContain('Verkäufer');
+  });
+
   it('rejects an unsupported language', async () => {
-    const { code } = await cli(['render', 'good.xml', '--language', 'de']);
+    const { code } = await cli(['render', 'good.xml', '--language', 'fr']);
+    expect(code).toBe(EXIT.usage);
+  });
+
+  it('renders the compact template', async () => {
+    const { code, written } = await cli([
+      'render',
+      'good.xml',
+      '--template',
+      'compact',
+      '--out',
+      'compact.html',
+    ]);
+    expect(code).toBe(EXIT.ok);
+    expect(written.get('compact.html')).toContain('compact template');
+  });
+
+  it('rejects an unknown template', async () => {
+    const { code } = await cli(['render', 'good.xml', '--template', 'fancy']);
     expect(code).toBe(EXIT.usage);
   });
 
