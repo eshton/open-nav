@@ -1,0 +1,15 @@
+# Categorises the auto-generated GitHub release notes by PR label.
+# Conventional-commit PR titles (feat:, fix:, docs: ...) still show even when a
+# PR carries no label; the catch-all keeps anything uncategorised.
+changelog:
+  categories:
+    - title: Features
+      labels: [feature, enhancement]
+    - title: Fixes
+      labels: [bug, fix]
+    - title: Documentation
+      labels: [docs, documentation]
+    - title: Maintenance & CI
+      labels: [ci, maintenance, deps, security]
+    - title: Other changes
+      labels: ['*']
