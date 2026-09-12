@@ -70,4 +70,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Tests import the packages by their built entry points, so build first.
+      - run: pnpm build
+
       - run: pnpm coverage
