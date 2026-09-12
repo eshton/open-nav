@@ -4,6 +4,11 @@ Open source libraries and tools for the Hungarian Tax and Customs
 Administration's (NAV) **Online Számla** system — building invoice data that
 NAV accepts, reporting it, and pulling invoices issued to you.
 
+[![CI](https://github.com/eshton/open-nav/actions/workflows/ci.yml/badge.svg)](https://github.com/eshton/open-nav/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@open-nav/core.svg?label=%40open-nav%2Fcore)](https://www.npmjs.com/package/@open-nav/core)
+[![node](https://img.shields.io/node/v/@open-nav/core.svg)](https://nodejs.org)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 > **Status: early development.** The packages are release-ready but not yet
 > on npm — the scope is reserved and the pipeline is in place, see
 > [Installing](#installing). The API surface will change without notice, and
