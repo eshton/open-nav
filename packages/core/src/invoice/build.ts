@@ -137,14 +137,24 @@ export function buildInvoice(input: BuildInvoiceInput): InvoiceData {
         ? { supplierBankAccountNumber: input.supplier.bankAccount }
         : {}),
     },
-    customerInfo: {
-      customerVatStatus,
-      ...(customerHasTaxNumber && customerVatStatus !== 'PRIVATE_PERSON'
-        ? { customerVatData: { customerTaxNumber: parseTaxNumber(input.customer.taxNumber!) } }
-        : {}),
-      customerName: input.customer.name,
-      customerAddress: { detailedAddress: address(input.customer.address) },
-    },
+    // A private person's identifying data must not be reported to NAV — only
+    // the status. NAV rejects name/address/tax data for a private buyer
+    // (CUSTOMER_DATA_NOT_EXPECTED), so the builder omits it.
+    customerInfo:
+      customerVatStatus === 'PRIVATE_PERSON'
+        ? { customerVatStatus }
+        : {
+            customerVatStatus,
+            ...(customerHasTaxNumber
+              ? {
+                  customerVatData: {
+                    customerTaxNumber: parseTaxNumber(input.customer.taxNumber!),
+                  },
+                }
+              : {}),
+            customerName: input.customer.name,
+            customerAddress: { detailedAddress: address(input.customer.address) },
+          },
     invoiceDetail: {
       invoiceCategory: 'NORMAL',
       invoiceDeliveryDate: deliveryDate,

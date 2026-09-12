@@ -302,14 +302,31 @@ function checkCustomer(
     }
   }
 
-  if (status === 'PRIVATE_PERSON' && vatData !== undefined) {
-    // NAV's own private-person sample carries nothing but the status: no VAT
-    // data, no name, no address.
-    collector.error(
-      'CUSTOMER_DATA_NOT_EXPECTED',
-      `${path}.customerVatData`,
-      'must not be supplied for a private person',
-    );
+  if (status === 'PRIVATE_PERSON') {
+    // NAV forbids reporting a private buyer's identifying data — status only.
+    // Its own private-person sample carries nothing else, and the live service
+    // rejects name/address/VAT data with CUSTOMER_DATA_NOT_EXPECTED.
+    if (vatData !== undefined) {
+      collector.error(
+        'CUSTOMER_DATA_NOT_EXPECTED',
+        `${path}.customerVatData`,
+        'must not be supplied for a private person',
+      );
+    }
+    if (customer.customerName !== undefined) {
+      collector.error(
+        'CUSTOMER_DATA_NOT_EXPECTED',
+        `${path}.customerName`,
+        'must not be supplied for a private person',
+      );
+    }
+    if (customer.customerAddress !== undefined) {
+      collector.error(
+        'CUSTOMER_DATA_NOT_EXPECTED',
+        `${path}.customerAddress`,
+        'must not be supplied for a private person',
+      );
+    }
   }
 
   const taxNumber = vatData?.customerTaxNumber;

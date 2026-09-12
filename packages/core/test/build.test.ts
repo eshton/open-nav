@@ -77,13 +77,30 @@ describe('buildInvoice', () => {
     expect(parsed).toEqual(built);
   });
 
-  it('treats a customer with no tax number as a private person', () => {
-    const invoice = buildInvoice({
+  it('reports a private person as status only, with no identifying data', () => {
+    const built = buildInvoice({
       ...input,
       customer: { name: 'Magánszemély', address: input.customer.address },
-    }).invoiceMain.invoice!;
-    expect(invoice.invoiceHead.customerInfo?.customerVatStatus).toBe('PRIVATE_PERSON');
-    expect(invoice.invoiceHead.customerInfo?.customerVatData).toBeUndefined();
+    });
+    const customerInfo = built.invoiceMain.invoice!.invoiceHead.customerInfo!;
+    // NAV forbids a private buyer's data; the builder must omit name/address/VAT.
+    expect(customerInfo.customerVatStatus).toBe('PRIVATE_PERSON');
+    expect(customerInfo.customerVatData).toBeUndefined();
+    expect(customerInfo.customerName).toBeUndefined();
+    expect(customerInfo.customerAddress).toBeUndefined();
+    // ...and the result passes validation, no errors.
+    expect(validateInvoice(built, { operation: 'CREATE' }).errors).toEqual([]);
+  });
+
+  it('validation rejects a private person carrying identifying data', () => {
+    // A hand-built invoice that makes the mistake the builder now avoids.
+    const built = buildInvoice(input);
+    built.invoiceMain.invoice!.invoiceHead.customerInfo = {
+      customerVatStatus: 'PRIVATE_PERSON',
+      customerName: 'Nem megadható',
+    } as never;
+    const report = validateInvoice(built, { operation: 'CREATE' });
+    expect(report.errors.some((issue) => issue.code === 'CUSTOMER_DATA_NOT_EXPECTED')).toBe(true);
   });
 
   it('rejects an invoice with no lines', () => {
