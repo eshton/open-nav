@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -36,10 +36,13 @@ function read(path: string): Manifest {
 }
 
 const root = read(join(ROOT, 'package.json'));
-const packages = readdirSync(join(ROOT, 'packages')).map((dir) => ({
-  dir,
-  manifest: read(join(ROOT, 'packages', dir, 'package.json')),
-}));
+// Only real package directories: a stray file (a macOS .DS_Store) or a
+// directory without a manifest is not a package and must not fail the run.
+const packages = readdirSync(join(ROOT, 'packages'), { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name)
+  .filter((dir) => existsSync(join(ROOT, 'packages', dir, 'package.json')))
+  .map((dir) => ({ dir, manifest: read(join(ROOT, 'packages', dir, 'package.json')) }));
 const published = packages.filter(({ manifest }) => manifest.private !== true);
 
 describe('publishable packages', () => {
