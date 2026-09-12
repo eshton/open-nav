@@ -348,6 +348,26 @@ describe('render', () => {
     expect(code).toBe(EXIT.usage);
   });
 
+  it('renders a non-invoice document type', async () => {
+    const { code, written } = await cli([
+      'render',
+      'good.xml',
+      '--type',
+      'delivery-note',
+      '--out',
+      'note.html',
+    ]);
+    expect(code).toBe(EXIT.ok);
+    const html = written.get('note.html')!;
+    expect(html).toContain('SZÁLLÍTÓLEVÉL');
+    expect(html).not.toContain('Egységár');
+  });
+
+  it('rejects an unsupported document type', async () => {
+    const { code } = await cli(['render', 'good.xml', '--type', 'quote']);
+    expect(code).toBe(EXIT.usage);
+  });
+
   it('needs no credentials', async () => {
     const { code } = await cli(['render', 'good.xml', '--out', 'a.html'], { env: {} });
     expect(code).toBe(EXIT.ok);

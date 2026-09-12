@@ -112,6 +112,16 @@ describe('renderInvoicePdfNative', () => {
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
   }, 30_000);
 
+  it('renders each non-invoice document type', async () => {
+    for (const documentType of ['proforma', 'deliveryNote', 'receipt'] as const) {
+      const pdf = await renderInvoicePdfNative(sample('belfoldi-ertekesites-tobb-afa-tipus.xml'), {
+        documentType,
+      });
+      expect(pdf.subarray(0, 5).toString(), documentType).toBe('%PDF-');
+      expect(pdf.length, documentType).toBeGreaterThan(5_000);
+    }
+  }, 60_000);
+
   it('reports a missing font file rather than producing a broken PDF', async () => {
     await expect(
       renderInvoicePdfNative(sample('belfoldi-termekertekesites.xml'), {

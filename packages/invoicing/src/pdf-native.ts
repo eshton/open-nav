@@ -4,7 +4,14 @@ import { dirname, join } from 'node:path';
 import type { AddressType, InvoiceData, InvoiceType, LineType, VatRateType } from '@open-nav/core';
 import { toHexColor, toMargins, toPoints } from './color.js';
 import { formatAmount, formatDate, formatPercentage, formatTaxNumber } from './format.js';
-import { documentTitle, label, paymentMethodLabel, unitLabel } from './labels.js';
+import { label, paymentMethodLabel, unitLabel } from './labels.js';
+import {
+  documentDisplay,
+  documentHeading,
+  lineColumns,
+  type DocumentDisplay,
+  type LineColumn,
+} from './documents.js';
 import { deriveMarkings } from './markings.js';
 import { resolveTheme, type ResolvedTheme } from './theme.js';
 import type { RenderOptions } from './html.js';
@@ -145,6 +152,7 @@ function buildDefinition(
     ? [document.invoiceMain.invoice]
     : (document.invoiceMain.batchInvoice ?? []).map((entry) => entry.invoice);
 
+  const display = documentDisplay(options.documentType);
   const content: unknown[] = [];
   for (const [index, invoice] of invoices.entries()) {
     if (index > 0) content.push({ text: '', pageBreak: 'before' });
@@ -160,7 +168,7 @@ function buildDefinition(
     defaultStyle: { font: font.name, fontSize: base, color: palette.ink },
     info: { title: document.invoiceNumber },
     content,
-    footer: footerFactory(theme, palette, base, language, options),
+    footer: footerFactory(theme, palette, base, language, options, display.provenance),
   };
 }
 
@@ -187,8 +195,9 @@ function footerFactory(
   base: number,
   language: 'hu' | 'en',
   options: NativePdfOptions,
+  provenanceAllowed: boolean,
 ) {
-  const showProvenance = options.provenanceNote ?? theme.provenanceNote;
+  const showProvenance = provenanceAllowed && (options.provenanceNote ?? theme.provenanceNote);
   const lines = [...theme.footerLines, ...(showProvenance ? [label('notReported', language)] : [])];
   const margins = toMargins(theme.pageMargin, 40);
 
@@ -222,7 +231,10 @@ function invoiceContent(
   options: NativePdfOptions,
 ): unknown[] {
   const detail = invoice.invoiceHead.invoiceDetail;
-  const markings = deriveMarkings(invoice, language);
+  const documentType = options.documentType ?? 'invoice';
+  const display = documentDisplay(documentType);
+  const markings = display.markings ? deriveMarkings(invoice, language) : [];
+  const columns = lineColumns(display.lineMoney);
   const isModification = invoice.invoiceReference !== undefined;
   const content: unknown[] = [];
 
@@ -240,7 +252,7 @@ function invoiceContent(
     }
   }
   brand.push({
-    text: documentTitle(detail.invoiceCategory, isModification, language),
+    text: documentHeading(documentType, detail.invoiceCategory, isModification, language),
     fontSize: base * 2,
     bold: true,
     color: palette.accent,
@@ -250,6 +262,15 @@ function invoiceContent(
     brand.push({
       text: markings.map((marking) => marking.text).join(' · '),
       fontSize: base * 0.9,
+      color: palette.muted,
+      margin: [0, 3, 0, 0],
+    });
+  }
+  if (display.disclaimerKey) {
+    brand.push({
+      text: label(display.disclaimerKey, language),
+      italics: true,
+      fontSize: base * 0.85,
       color: palette.muted,
       margin: [0, 3, 0, 0],
     });
@@ -286,11 +307,12 @@ function invoiceContent(
       table: {
         headerRows: 1,
         // The header repeats on every page, which is what makes a long
-        // invoice readable in print.
-        widths: ['auto', '*', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto'],
+        // invoice readable in print. Description takes the slack; the rest
+        // size to content.
+        widths: columns.map((column) => (column === 'description' ? '*' : 'auto')),
         body: [
-          lineHeader(detail.currencyCode, language, palette, base),
-          ...lines.map((line) => lineRow(line, language)),
+          lineHeader(columns, detail.currencyCode, language, palette, base),
+          ...lines.map((line) => lineRow(columns, line, language)),
         ],
       },
       layout: tableLayout(palette, theme.zebraRows),
@@ -299,7 +321,7 @@ function invoiceContent(
   }
 
   // --- totals -----------------------------------------------------------
-  const totals = totalRows(invoice, language, palette, base);
+  const totals = totalRows(invoice, language, palette, base, display.totals);
   if (totals.length > 0) {
     content.push({
       margin: [0, 14, 0, 0],
@@ -311,7 +333,9 @@ function invoiceContent(
   }
 
   // --- VAT summary ------------------------------------------------------
-  const byRate = invoice.invoiceSummary.summaryNormal?.summaryByVatRate ?? [];
+  const byRate = display.vatSummary
+    ? (invoice.invoiceSummary.summaryNormal?.summaryByVatRate ?? [])
+    : [];
   if (byRate.length > 1) {
     content.push(
       sectionHeading(label('summaryByVatRate', language), detail.currencyCode, palette, base),
@@ -559,43 +583,79 @@ function vatRateText(rate: VatRateType | undefined, language: 'hu' | 'en'): stri
   return '';
 }
 
+/** Header label for a line column. */
+function columnHeaderText(column: LineColumn, currency: string, language: 'hu' | 'en'): string {
+  switch (column) {
+    case 'net':
+      return `${label('netAmount', language)} (${currency})`;
+    case 'vatRate':
+      return label('vatRate', language);
+    case 'vatAmount':
+      return label('vatAmount', language);
+    case 'gross':
+      return label('grossAmount', language);
+    case 'unitPrice':
+      return label('unitPrice', language);
+    default:
+      return label(column, language);
+  }
+}
+
+/** A left-aligned (text) column vs a right-aligned (numeric) one. */
+const TEXT_COLUMN: Partial<Record<LineColumn, true>> = { description: true, unit: true };
+
 function lineHeader(
+  columns: LineColumn[],
   currency: string,
   language: 'hu' | 'en',
   palette: Palette,
   base: number,
 ): unknown[] {
-  return [
-    headerCell(label('lineNumber', language), palette, base, 'right'),
-    headerCell(label('description', language), palette, base),
-    headerCell(label('quantity', language), palette, base, 'right'),
-    headerCell(label('unit', language), palette, base),
-    headerCell(label('unitPrice', language), palette, base, 'right'),
-    headerCell(`${label('netAmount', language)} (${currency})`, palette, base, 'right'),
-    headerCell(label('vatRate', language), palette, base, 'right'),
-    headerCell(label('vatAmount', language), palette, base, 'right'),
-    headerCell(label('grossAmount', language), palette, base, 'right'),
-  ];
+  return columns.map((column) =>
+    headerCell(
+      columnHeaderText(column, currency, language),
+      palette,
+      base,
+      TEXT_COLUMN[column] ? undefined : 'right',
+    ),
+  );
 }
 
-function lineRow(line: LineType, language: 'hu' | 'en'): unknown[] {
+function columnValue(column: LineColumn, line: LineType, language: 'hu' | 'en'): string {
   const normal = line.lineAmountsNormal;
   const simplified = line.lineAmountsSimplified;
-  const rate = normal?.lineVatRate ?? simplified?.lineVatRate;
-  const gross =
-    normal?.lineGrossAmountData?.lineGrossAmountNormal ?? simplified?.lineGrossAmountSimplified;
+  switch (column) {
+    case 'lineNumber':
+      return String(line.lineNumber);
+    case 'description':
+      return line.lineDescription ?? '';
+    case 'quantity':
+      return line.quantity ? formatAmount(line.quantity, language, decimalsOf(line.quantity)) : '';
+    case 'unit':
+      return unitLabel(line.unitOfMeasure, line.unitOfMeasureOwn, language);
+    case 'unitPrice':
+      return line.unitPrice
+        ? formatAmount(line.unitPrice, language, decimalsOf(line.unitPrice))
+        : '';
+    case 'net':
+      return normal ? formatAmount(normal.lineNetAmountData.lineNetAmount, language) : '';
+    case 'vatRate':
+      return vatRateText(normal?.lineVatRate ?? simplified?.lineVatRate, language);
+    case 'vatAmount':
+      return normal?.lineVatData ? formatAmount(normal.lineVatData.lineVatAmount, language) : '';
+    case 'gross': {
+      const gross =
+        normal?.lineGrossAmountData?.lineGrossAmountNormal ?? simplified?.lineGrossAmountSimplified;
+      return gross ? formatAmount(gross, language) : '';
+    }
+  }
+}
 
-  return [
-    num(String(line.lineNumber)),
-    { text: line.lineDescription ?? '' },
-    num(line.quantity ? formatAmount(line.quantity, language, decimalsOf(line.quantity)) : ''),
-    { text: unitLabel(line.unitOfMeasure, line.unitOfMeasureOwn, language) },
-    num(line.unitPrice ? formatAmount(line.unitPrice, language, decimalsOf(line.unitPrice)) : ''),
-    num(normal ? formatAmount(normal.lineNetAmountData.lineNetAmount, language) : ''),
-    num(vatRateText(rate, language)),
-    num(normal?.lineVatData ? formatAmount(normal.lineVatData.lineVatAmount, language) : ''),
-    num(gross ? formatAmount(gross, language) : ''),
-  ];
+function lineRow(columns: LineColumn[], line: LineType, language: 'hu' | 'en'): unknown[] {
+  return columns.map((column) => {
+    const value = columnValue(column, line, language);
+    return TEXT_COLUMN[column] ? { text: value } : num(value);
+  });
 }
 
 /** Keep a quantity's own precision rather than forcing two decimals. */
@@ -609,12 +669,14 @@ function totalRows(
   language: 'hu' | 'en',
   palette: Palette,
   base: number,
+  mode: DocumentDisplay['totals'],
 ): unknown[][] {
+  if (mode === 'none') return [];
   const summary = invoice.invoiceSummary;
   const currency = invoice.invoiceHead.invoiceDetail.currencyCode;
   const rows: unknown[][] = [];
 
-  if (summary.summaryNormal) {
+  if (summary.summaryNormal && mode === 'full') {
     rows.push(
       totalRow(
         label('totalNet', language),

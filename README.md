@@ -245,6 +245,15 @@ the provision it comes from.
 open-nav render invoice.xml --pdf invoice.pdf --theme theme.json
 ```
 
+**Non-invoice documents from the same data.** `--type proforma`
+(_díjbekérő_), `--type delivery-note` (_szállítólevél_, quantities without
+prices) and `--type receipt` (_nyugta_, the gross total) render the business
+documents that are printed but not reported through Online Számla; each carries
+a "not a tax invoice" note instead of the NAV-provenance line. In code:
+`renderProformaHtml`, `renderDeliveryNoteHtml`, `renderReceiptHtml`, or the
+`documentType` option. (A _nyugta_'s own data reporting, where required, goes
+through NAV's online cash-register system, not this one.)
+
 Branding is a JSON theme: logo, palette, fonts, page size and margins, issuer
 contact lines, footer lines, and a `customCss` escape hatch. See
 [`examples/invoice-theme.json`](examples/invoice-theme.json). Theme values are
