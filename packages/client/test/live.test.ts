@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buildInvoice, hungarianToday, type SoftwareType } from '@open-nav/core';
+import {
+  buildInvoice,
+  computeInvoiceSummary,
+  hungarianToday,
+  Decimal,
+  type InvoiceData,
+  type SoftwareType,
+} from '@open-nav/core';
 import { NavClient, waitForTransaction, type NavCredentials } from '../src/index.js';
 
 /**
@@ -127,10 +134,8 @@ live('live NAV test system', () => {
     expect(response).toBeDefined();
   });
 
-  it('submits an invoice and reaches a verdict', { timeout: 120_000 }, async () => {
-    const client = makeClient();
-    const invoiceNumber = `ONAV-LIVE-${Date.now()}`;
-    const invoice = buildInvoice({
+  const sampleInvoice = (invoiceNumber: string): InvoiceData =>
+    buildInvoice({
       invoiceNumber,
       issueDate: hungarianToday(),
       paymentDate: hungarianToday(),
@@ -158,22 +163,16 @@ live('live NAV test system', () => {
         },
       },
       lines: [
-        {
-          description: 'open-nav live submission test',
-          quantity: 1,
-          unitPrice: 1000,
-          vatPercentage: 0.27,
-        },
+        { description: 'open-nav live test', quantity: 1, unitPrice: 1000, vatPercentage: 0.27 },
       ],
     });
 
-    const { transactionId } = await client.submitInvoices([{ operation: 'CREATE', invoice }]);
-    console.log(`submitted ${invoiceNumber} -> transaction ${transactionId}`);
-    expect(transactionId).toBeTruthy();
-
-    const outcome = await waitForTransaction(client, transactionId);
+  const logVerdict = (
+    label: string,
+    outcome: Awaited<ReturnType<typeof waitForTransaction>>,
+  ): void => {
     console.log(
-      `verdict: ${outcome.accepted.length} accepted, ${outcome.rejected.length} rejected, ${outcome.warnings.length} with warnings`,
+      `${label} verdict: ${outcome.accepted.length} accepted, ${outcome.rejected.length} rejected, ${outcome.warnings.length} with warnings`,
     );
     for (const result of outcome.results) {
       for (const message of result.businessValidationMessages ?? []) {
@@ -182,10 +181,98 @@ live('live NAV test system', () => {
         );
       }
     }
+  };
 
-    // The round trip reached a terminal per-invoice verdict — auth, signature,
-    // submit and polling all worked. Acceptance itself is logged above; a
-    // rejection there is data for you, not a broken client.
+  const negate = (obj: Record<string, string>, key: string): void => {
+    obj[key] = Decimal.from(obj[key]!).negate().toString();
+  };
+
+  /** A STORNO of a created invoice: reverse every amount, reference the original. */
+  const stornoOf = (created: InvoiceData, newNumber: string): InvoiceData => {
+    const doc = structuredClone(created);
+    doc.invoiceNumber = newNumber;
+    const invoice = doc.invoiceMain.invoice!;
+    invoice.invoiceReference = {
+      originalInvoiceNumber: created.invoiceNumber,
+      modifyWithoutMaster: false,
+      modificationIndex: 1,
+    };
+    // NAV requires lineOperation CREATE on every line of a modifying/cancelling
+    // report (INVALID_LINE_OPERATION otherwise). The precise chain line-
+    // numbering for a storno follows NAV's modification spec — tracked
+    // separately; this exercises the client round trip and NAV's verdict.
+    for (const line of invoice.invoiceLines!.line) {
+      line.lineModificationReference = {
+        lineNumberReference: line.lineNumber,
+        lineOperation: 'CREATE',
+      };
+      const amounts = line.lineAmountsNormal!;
+      negate(amounts.lineNetAmountData as unknown as Record<string, string>, 'lineNetAmount');
+      negate(amounts.lineNetAmountData as unknown as Record<string, string>, 'lineNetAmountHUF');
+      if (amounts.lineVatData) {
+        negate(amounts.lineVatData as unknown as Record<string, string>, 'lineVatAmount');
+        negate(amounts.lineVatData as unknown as Record<string, string>, 'lineVatAmountHUF');
+      }
+      if (amounts.lineGrossAmountData) {
+        negate(
+          amounts.lineGrossAmountData as unknown as Record<string, string>,
+          'lineGrossAmountNormal',
+        );
+        negate(
+          amounts.lineGrossAmountData as unknown as Record<string, string>,
+          'lineGrossAmountNormalHUF',
+        );
+      }
+    }
+    invoice.invoiceSummary = computeInvoiceSummary(invoice);
+    return doc;
+  };
+
+  it('submits an invoice and reaches a verdict', { timeout: 120_000 }, async () => {
+    const client = makeClient();
+    const number = `ONAV-LIVE-${Date.now()}`;
+    const { transactionId } = await client.submitInvoices([
+      { operation: 'CREATE', invoice: sampleInvoice(number) },
+    ]);
+    expect(transactionId).toBeTruthy();
+    const outcome = await waitForTransaction(client, transactionId);
+    logVerdict('CREATE', outcome);
+    expect(outcome.results.length).toBeGreaterThan(0);
+  });
+
+  it('storno cancels a reported invoice', { timeout: 180_000 }, async () => {
+    const client = makeClient();
+    const created = sampleInvoice(`ONAV-LIVE-${Date.now()}`);
+    const create = await client.submitInvoices([{ operation: 'CREATE', invoice: created }]);
+    await waitForTransaction(client, create.transactionId);
+
+    const storno = stornoOf(created, `ONAV-STRN-${Date.now()}`);
+    const { transactionId } = await client.submitInvoices([
+      { operation: 'STORNO', invoice: storno },
+    ]);
+    const outcome = await waitForTransaction(client, transactionId);
+    logVerdict('STORNO', outcome);
+    expect(outcome.results.length).toBeGreaterThan(0);
+  });
+
+  it('technically annuls an invoice report', { timeout: 180_000 }, async () => {
+    const client = makeClient();
+    const number = `ONAV-LIVE-${Date.now()}`;
+    const create = await client.submitInvoices([
+      { operation: 'CREATE', invoice: sampleInvoice(number) },
+    ]);
+    await waitForTransaction(client, create.transactionId);
+
+    const { transactionId } = await client.submitAnnulments([
+      {
+        annulmentReference: number,
+        annulmentTimestamp: new Date().toISOString(),
+        annulmentCode: 'ERRATIC_DATA',
+        annulmentReason: 'open-nav live test',
+      },
+    ]);
+    const outcome = await waitForTransaction(client, transactionId);
+    logVerdict('ANNUL', outcome);
     expect(outcome.results.length).toBeGreaterThan(0);
   });
 });
