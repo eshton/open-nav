@@ -11,7 +11,7 @@ export const CREDENTIALS: NavCredentials = {
 };
 
 export const SOFTWARE: SoftwareType = {
-  softwareId: 'OPENNAV000000001',
+  softwareId: 'OPENNAV00000000001',
   softwareName: 'open-nav test',
   softwareOperation: 'LOCAL_SOFTWARE',
   softwareMainVersion: '0.1.0',

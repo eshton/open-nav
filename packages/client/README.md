@@ -23,7 +23,7 @@ const client = new NavClient({
     taxNumber: '12345678', // the 8 digit core, not the 11 digit number
   },
   software: {
-    softwareId: 'MYCOMPANY0000001',
+    softwareId: 'MYCOMPANY000000001',
     softwareName: 'my invoicing app',
     softwareOperation: 'LOCAL_SOFTWARE',
     softwareMainVersion: '1.0.0',

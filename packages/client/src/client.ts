@@ -3,6 +3,7 @@ import {
   HEADER_VERSION,
   MAX_INVOICE_BATCH_SIZE,
   NavValidationError,
+  assertSoftwareId,
   PASSWORD_HASH_CRYPTO_TYPE,
   REQUEST_VERSION,
   SIGNATURE_CRYPTO_TYPE,
@@ -106,6 +107,7 @@ export class NavClient {
 
   constructor(options: NavClientOptions) {
     assertCredentials(options.credentials);
+    assertSoftwareId(options.software.softwareId);
     this.credentials = options.credentials;
     this.software = options.software;
     this.baseUrl = options.baseUrl ?? BASE_URLS[options.environment ?? 'test'];

@@ -58,7 +58,7 @@ const credentials = {
     invoice.invoiceMain.invoice.invoiceHead.supplierInfo.supplierTaxNumber.taxpayerId,
 };
 const software = {
-  softwareId: 'OPENNAVEXAMPLE001',
+  softwareId: 'OPENNAVEXAMPLE0001',
   softwareName: 'open-nav example',
   softwareOperation: 'LOCAL_SOFTWARE',
   softwareMainVersion: '0.1.0',
