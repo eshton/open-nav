@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildInvoice,
+  buildStorno,
   checkInvoiceSummary,
   parseDocument,
   serializeDocument,
@@ -105,6 +106,28 @@ describe('buildInvoice', () => {
 
   it('rejects an invoice with no lines', () => {
     expect(() => buildInvoice({ ...input, lines: [] })).toThrowError(/at least one line/);
+  });
+
+  it('builds a storno that reverses amounts and references the original', () => {
+    const original = buildInvoice(input);
+    const storno = buildStorno(original, { invoiceNumber: 'STORNO-1' });
+    const invoice = storno.invoiceMain.invoice!;
+
+    expect(storno.invoiceNumber).toBe('STORNO-1');
+    expect(invoice.invoiceReference?.originalInvoiceNumber).toBe(input.invoiceNumber);
+    expect(invoice.invoiceReference?.modificationIndex).toBe(1);
+
+    const lineCount = invoice.invoiceLines!.line.length;
+    const first = invoice.invoiceLines!.line[0]!;
+    // lineOperation CREATE, chain reference continues past the original.
+    expect(first.lineModificationReference?.lineOperation).toBe('CREATE');
+    expect(first.lineModificationReference?.lineNumberReference).toBe(lineCount + 1);
+    expect(first.lineAmountsNormal!.lineNetAmountData.lineNetAmount).toBe('-10000.00');
+
+    // Amounts and summary are negated, and it reconciles + validates as STORNO.
+    expect(invoice.invoiceSummary.summaryNormal?.invoiceNetAmount).toBe('-20000.00');
+    expect(checkInvoiceSummary(invoice)).toEqual([]);
+    expect(validateInvoice(storno, { operation: 'STORNO' }).errors).toEqual([]);
   });
 
   it('requires the supplier tax number', () => {

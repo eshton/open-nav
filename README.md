@@ -170,6 +170,11 @@ It covers the common invoice, not the whole schema — no aggregate or simplifie
 invoices, product-fee lines or margin schemes. It returns the plain
 `InvoiceData`, so anything it does not cover you set on the result yourself.
 
+To cancel a reported invoice, `buildStorno(original, { invoiceNumber })` reverses
+it — negated amounts, the `invoiceReference` and per-line chain numbering NAV
+wants — producing a storno the service accepts (verified against NAV's test
+system).
+
 ## Validating before you send
 
 Local validation is the point of the library, not a sideline. Two layers run:

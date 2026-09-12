@@ -179,6 +179,79 @@ export function buildInvoice(input: BuildInvoiceInput): InvoiceData {
   };
 }
 
+export interface BuildStornoOptions {
+  /** Number of the storno invoice itself (distinct from the original). */
+  invoiceNumber: string;
+  /** Issue date of the storno; defaults to the original's. */
+  issueDate?: string;
+  /** Position of this modification in the chain. Defaults to 1. */
+  modificationIndex?: number;
+}
+
+/**
+ * Build a storno (full cancellation) of an invoice.
+ *
+ * NAV models a storno as a modifying report: an `invoiceReference` to the
+ * original, every line's amounts reversed, and each line carrying a
+ * `lineModificationReference`. Two NAV rules the shape must satisfy, both
+ * learned from the live service: `lineOperation` is always `CREATE` on a
+ * modifying line, and the reversing lines take chain positions *after* the
+ * original (`lineNumberReference` continues past it) while the document's own
+ * line numbers stay 1..N. Amounts and the summary are negated.
+ *
+ * Handles the common single-invoice, first-modification case; chained
+ * modifications (modificationIndex > 1) are the caller's to sequence.
+ */
+export function buildStorno(original: InvoiceData, options: BuildStornoOptions): InvoiceData {
+  const doc = structuredClone(original);
+  doc.invoiceNumber = options.invoiceNumber;
+  if (options.issueDate) doc.invoiceIssueDate = options.issueDate;
+
+  const invoice = doc.invoiceMain.invoice;
+  if (!invoice) throw new Error('buildStorno needs a single-invoice document');
+
+  const lines = invoice.invoiceLines?.line ?? [];
+  const originalCount = lines.length;
+
+  invoice.invoiceReference = {
+    originalInvoiceNumber: original.invoiceNumber,
+    modifyWithoutMaster: false,
+    modificationIndex: options.modificationIndex ?? 1,
+  };
+
+  lines.forEach((line, index) => {
+    // Document line numbers stay 1..N; the reference continues the chain.
+    line.lineModificationReference = {
+      lineNumberReference: originalCount + index + 1,
+      lineOperation: 'CREATE',
+    };
+    // Reverse the quantity too, so quantity x unitPrice still equals the
+    // (negated) net; the unit price itself stays positive.
+    if (line.quantity !== undefined) negateAmount(line, 'quantity');
+    const amounts = line.lineAmountsNormal;
+    if (!amounts) return;
+    negateAmount(amounts.lineNetAmountData, 'lineNetAmount');
+    negateAmount(amounts.lineNetAmountData, 'lineNetAmountHUF');
+    if (amounts.lineVatData) {
+      negateAmount(amounts.lineVatData, 'lineVatAmount');
+      negateAmount(amounts.lineVatData, 'lineVatAmountHUF');
+    }
+    if (amounts.lineGrossAmountData) {
+      negateAmount(amounts.lineGrossAmountData, 'lineGrossAmountNormal');
+      negateAmount(amounts.lineGrossAmountData, 'lineGrossAmountNormalHUF');
+    }
+  });
+
+  invoice.invoiceSummary = computeInvoiceSummary(invoice);
+  return doc;
+}
+
+function negateAmount(target: object, key: string): void {
+  const record = target as Record<string, string | undefined>;
+  const value = record[key];
+  if (value !== undefined) record[key] = Decimal.from(value).negate().toString();
+}
+
 function address(input: BuildAddress): {
   countryCode: string;
   postalCode: string;
