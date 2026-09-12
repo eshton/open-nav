@@ -26,6 +26,11 @@ describe('formatAmount', () => {
     expect(formatAmount('1234567.89', 'en')).toBe('1,234,567.89');
   });
 
+  it('uses German grouping (dot) and decimal (comma)', () => {
+    expect(formatAmount('1234567.89', 'de')).toBe('1.234.567,89');
+    expect(formatAmount('-1000', 'de')).toBe('-1.000,00');
+  });
+
   it('formats without going through a JavaScript number', () => {
     // Beyond the safe integer range: a Number round trip would corrupt this.
     const huge = '9999999999999999.99';
@@ -49,6 +54,7 @@ describe('formatPercentage', () => {
   it('keeps a fractional percentage and localises the separator', () => {
     expect(formatPercentage('0.075', 'hu')).toBe('7,5%');
     expect(formatPercentage('0.075', 'en')).toBe('7.5%');
+    expect(formatPercentage('0.075', 'de')).toBe('7,5%');
   });
 
   it('drops trailing zeros from a padded rate', () => {
@@ -63,6 +69,10 @@ describe('formatDate', () => {
 
   it('leaves ISO dates alone in English', () => {
     expect(formatDate('2021-05-15', 'en')).toBe('2021-05-15');
+  });
+
+  it('writes German dates day-first with dots', () => {
+    expect(formatDate('2021-05-15', 'de')).toBe('15.05.2021.');
   });
 
   it('passes through anything that is not a plain date', () => {

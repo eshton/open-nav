@@ -73,6 +73,12 @@ describe('resolveTheme', () => {
     it('names the offending field so a bad theme is easy to fix', () => {
       expect(() => resolveTheme({ panelColor: 'nope!' })).toThrowError(/theme\.panelColor/);
     });
+
+    it('accepts the two templates and rejects any other', () => {
+      expect(resolveTheme({}).template).toBe('standard');
+      expect(() => resolveTheme({ template: 'compact' })).not.toThrow();
+      expect(() => resolveTheme({ template: 'fancy' as never })).toThrowError(/theme\.template/);
+    });
   });
 
   describe('logo', () => {

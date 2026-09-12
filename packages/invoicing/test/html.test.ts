@@ -151,6 +151,27 @@ describe('renderInvoiceHtml', () => {
     });
   });
 
+  it('renders in German on request, including VAT-Act phrases', () => {
+    const html = renderInvoiceHtml(sample('belfoldi-ertekesites-tobb-afa-tipus.xml'), {
+      language: 'de',
+    });
+    expect(html).toContain('RECHNUNG');
+    expect(html).toContain('Verkäufer');
+    expect(html).toContain('Bruttosumme');
+    expect(html).toContain('lang="de"');
+    // A reverse-charge phrase is derived and translated, not left to a template.
+    expect(html).toContain('Steuerschuldnerschaft des Leistungsempfängers');
+  });
+
+  it('tightens the layout with the compact template', () => {
+    const standard = renderInvoiceHtml(sample('belfoldi-termekertekesites.xml'));
+    const compact = renderInvoiceHtml(sample('belfoldi-termekertekesites.xml'), {
+      theme: { template: 'compact' },
+    });
+    expect(standard).not.toContain('compact template');
+    expect(compact).toContain('compact template');
+  });
+
   it('shows a VAT breakdown only when there is more than one rate', () => {
     // Headings are uppercased by CSS, so the markup carries the normal case.
     expect(renderInvoiceHtml(sample('belfoldi-ertekesites-tobb-afa-tipus.xml'))).toContain(

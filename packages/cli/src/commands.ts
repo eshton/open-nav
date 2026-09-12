@@ -23,6 +23,7 @@ import {
   loadTheme,
   renderInvoiceHtml,
   renderInvoicePdf,
+  type DocumentLanguage,
   type DocumentType,
   type InvoiceTheme,
 } from '@open-nav/invoicing';
@@ -136,6 +137,16 @@ function parseDocumentType(value: string | boolean | undefined): DocumentType {
     throw new UsageError('--type must be invoice, proforma, delivery-note or receipt');
   }
   return type;
+}
+
+/** Parse the --template flag, or undefined when not given. */
+function parseTemplate(value: string | boolean | undefined): 'standard' | 'compact' | undefined {
+  if (value === undefined) return undefined;
+  const template = String(value).toLowerCase();
+  if (template !== 'standard' && template !== 'compact') {
+    throw new UsageError('--template must be standard or compact');
+  }
+  return template;
 }
 
 /** An invoice number can contain characters a file name cannot. */
@@ -596,18 +607,19 @@ export const COMMANDS: CommandDefinition[] = [
     name: 'render',
     summary: 'Render an invoice as a printable HTML or PDF document',
     usage:
-      'open-nav render <file.xml> [--type invoice|proforma|delivery-note|receipt] [--pdf file.pdf] [--out file.html] [--theme theme.json] [--logo logo.png] [--engine native|browser] [--language hu|en] [--note text]',
+      'open-nav render <file.xml> [--type invoice|proforma|delivery-note|receipt] [--template standard|compact] [--pdf file.pdf] [--out file.html] [--theme theme.json] [--logo logo.png] [--engine native|browser] [--language hu|en|de] [--note text]',
     needsCredentials: false,
     options: [
       {
         flag: '--type',
         description: 'invoice (default), proforma, delivery-note or receipt',
       },
+      { flag: '--template', description: 'standard (default) or compact layout' },
       { flag: '--pdf', description: 'Write a PDF, converting with a local browser' },
       { flag: '--out', description: 'Write HTML here instead of standard output' },
       { flag: '--theme', description: 'JSON theme: logo, colours, fonts, page setup, footer' },
       { flag: '--logo', description: 'Image to inline as the logo, overriding the theme' },
-      { flag: '--language', description: 'hu (default) or en' },
+      { flag: '--language', description: 'hu (default), en or de' },
       { flag: '--note', description: 'Extra note printed under the totals' },
       { flag: '--engine', description: 'native (default, no browser) or browser' },
       { flag: '--browser', description: 'Browser executable — browser engine only' },
@@ -618,14 +630,21 @@ export const COMMANDS: CommandDefinition[] = [
       const invoice = readInvoice(path, context);
 
       const requested = flags['language'] ? String(flags['language']) : 'hu';
-      if (requested !== 'hu' && requested !== 'en') {
-        throw new UsageError('--language must be hu or en');
+      if (requested !== 'hu' && requested !== 'en' && requested !== 'de') {
+        throw new UsageError('--language must be hu, en or de');
       }
-      const language: 'hu' | 'en' = requested;
+      const language: DocumentLanguage = requested;
 
       const documentType = parseDocumentType(flags['type']);
+      const template = parseTemplate(flags['template']);
 
-      const theme = resolveThemeFlags(flags, context);
+      const themeFromFlags = resolveThemeFlags(flags, context);
+      // --template is a layout choice on the theme; merge it in even when no
+      // --theme/--logo was given.
+      const theme =
+        template || themeFromFlags
+          ? { ...(themeFromFlags ?? {}), ...(template ? { template } : {}) }
+          : undefined;
       const renderOptions = {
         language,
         documentType,

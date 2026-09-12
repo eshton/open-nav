@@ -3,7 +3,13 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import type { AddressType, InvoiceData, InvoiceType, LineType, VatRateType } from '@open-nav/core';
 import { toHexColor, toMargins, toPoints } from './color.js';
-import { formatAmount, formatDate, formatPercentage, formatTaxNumber } from './format.js';
+import {
+  formatAmount,
+  formatDate,
+  formatPercentage,
+  formatTaxNumber,
+  type DocumentLanguage,
+} from './format.js';
 import { label, paymentMethodLabel, unitLabel } from './labels.js';
 import {
   documentDisplay,
@@ -139,7 +145,10 @@ function buildDefinition(
   options: NativePdfOptions,
 ): Record<string, unknown> {
   const language = options.language ?? 'hu';
-  const base = toPoints(theme.baseFontSize, 10);
+  // The compact template shrinks the type scale; everything else scales from
+  // base, so this tightens the whole layout without further branching.
+  const compact = theme.template === 'compact';
+  const base = toPoints(theme.baseFontSize, 10) * (compact ? 0.92 : 1);
   const palette: Palette = {
     accent: toHexColor(theme.accentColor, '#16181d'),
     ink: toHexColor(theme.inkColor, '#16181d'),
@@ -193,7 +202,7 @@ function footerFactory(
   theme: ResolvedTheme,
   palette: Palette,
   base: number,
-  language: 'hu' | 'en',
+  language: DocumentLanguage,
   options: NativePdfOptions,
   provenanceAllowed: boolean,
 ) {
@@ -227,7 +236,7 @@ function invoiceContent(
   theme: ResolvedTheme,
   palette: Palette,
   base: number,
-  language: 'hu' | 'en',
+  language: DocumentLanguage,
   options: NativePdfOptions,
 ): unknown[] {
   const detail = invoice.invoiceHead.invoiceDetail;
@@ -402,7 +411,11 @@ function invoiceContent(
   return content;
 }
 
-function metaRows(document: InvoiceData, invoice: InvoiceType, language: 'hu' | 'en'): unknown[][] {
+function metaRows(
+  document: InvoiceData,
+  invoice: InvoiceType,
+  language: DocumentLanguage,
+): unknown[][] {
   const detail = invoice.invoiceHead.invoiceDetail;
   const rows: Array<[string, string]> = [
     [label('invoiceNumber', language), document.invoiceNumber],
@@ -519,7 +532,7 @@ function formatAddress(address: AddressType | undefined): string {
   return '';
 }
 
-function supplierLines(invoice: InvoiceType, language: 'hu' | 'en', theme: ResolvedTheme) {
+function supplierLines(invoice: InvoiceType, language: DocumentLanguage, theme: ResolvedTheme) {
   const supplier = invoice.invoiceHead.supplierInfo;
   const rows: Array<[string, string]> = [
     [label('taxNumber', language), formatTaxNumber(supplier.supplierTaxNumber)],
@@ -544,7 +557,7 @@ function supplierLines(invoice: InvoiceType, language: 'hu' | 'en', theme: Resol
   };
 }
 
-function customerLines(invoice: InvoiceType, language: 'hu' | 'en') {
+function customerLines(invoice: InvoiceType, language: DocumentLanguage) {
   const customer = invoice.invoiceHead.customerInfo;
   if (!customer) return { name: '—', address: '', rows: [], contact: [] };
 
@@ -572,7 +585,7 @@ function customerLines(invoice: InvoiceType, language: 'hu' | 'en') {
   };
 }
 
-function vatRateText(rate: VatRateType | undefined, language: 'hu' | 'en'): string {
+function vatRateText(rate: VatRateType | undefined, language: DocumentLanguage): string {
   if (!rate) return '';
   if (rate.vatPercentage !== undefined) return formatPercentage(rate.vatPercentage, language);
   if (rate.vatContent !== undefined) return formatPercentage(rate.vatContent, language);
@@ -584,7 +597,11 @@ function vatRateText(rate: VatRateType | undefined, language: 'hu' | 'en'): stri
 }
 
 /** Header label for a line column. */
-function columnHeaderText(column: LineColumn, currency: string, language: 'hu' | 'en'): string {
+function columnHeaderText(
+  column: LineColumn,
+  currency: string,
+  language: DocumentLanguage,
+): string {
   switch (column) {
     case 'net':
       return `${label('netAmount', language)} (${currency})`;
@@ -607,7 +624,7 @@ const TEXT_COLUMN: Partial<Record<LineColumn, true>> = { description: true, unit
 function lineHeader(
   columns: LineColumn[],
   currency: string,
-  language: 'hu' | 'en',
+  language: DocumentLanguage,
   palette: Palette,
   base: number,
 ): unknown[] {
@@ -621,7 +638,7 @@ function lineHeader(
   );
 }
 
-function columnValue(column: LineColumn, line: LineType, language: 'hu' | 'en'): string {
+function columnValue(column: LineColumn, line: LineType, language: DocumentLanguage): string {
   const normal = line.lineAmountsNormal;
   const simplified = line.lineAmountsSimplified;
   switch (column) {
@@ -651,7 +668,7 @@ function columnValue(column: LineColumn, line: LineType, language: 'hu' | 'en'):
   }
 }
 
-function lineRow(columns: LineColumn[], line: LineType, language: 'hu' | 'en'): unknown[] {
+function lineRow(columns: LineColumn[], line: LineType, language: DocumentLanguage): unknown[] {
   return columns.map((column) => {
     const value = columnValue(column, line, language);
     return TEXT_COLUMN[column] ? { text: value } : num(value);
@@ -666,7 +683,7 @@ function decimalsOf(value: string): number {
 
 function totalRows(
   invoice: InvoiceType,
-  language: 'hu' | 'en',
+  language: DocumentLanguage,
   palette: Palette,
   base: number,
   mode: DocumentDisplay['totals'],
