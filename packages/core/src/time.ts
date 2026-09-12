@@ -21,6 +21,24 @@ export function toSignatureTimestamp(value: Date | string = new Date()): string 
   return `${iso.slice(0, 4)}${iso.slice(5, 7)}${iso.slice(8, 10)}${iso.slice(11, 13)}${iso.slice(14, 16)}${iso.slice(17, 19)}`;
 }
 
+/**
+ * The current date in Hungary (Europe/Budapest), as `yyyy-MM-dd`.
+ *
+ * NAV's `date` fields are Hungarian calendar dates, so a question like "is this
+ * invoice dated in the future" must be judged against the Hungarian date, not
+ * UTC: near midnight the two differ, and a UTC comparison would reject an
+ * invoice that is validly dated today. The zone carries its own DST, so this is
+ * correct across the CET/CEST switch.
+ */
+export function hungarianToday(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Budapest',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+}
+
 /** Render a NAV `date` field (`xs:date`) as `yyyy-MM-dd` in UTC. */
 export function toNavDate(value: Date | string = new Date()): string {
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
