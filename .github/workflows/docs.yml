@@ -37,7 +37,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm docs
+      # `pnpm docs` is a built-in pnpm command (opens a package's docs in a
+      # browser); `pnpm run docs` is needed to invoke the repository script.
+      - run: pnpm run docs
 
       - uses: actions/configure-pages@v6
 
