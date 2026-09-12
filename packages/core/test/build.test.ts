@@ -136,6 +136,71 @@ describe('buildInvoice', () => {
     ).toThrowError(/supplier tax number/);
   });
 
+  it('accepts gross-entered unit prices and derives the net line', () => {
+    const invoice = buildInvoice({
+      ...input,
+      priceMode: 'gross',
+      lines: [{ description: 'Bruttó árból', quantity: 1, unitPrice: 1270, vatPercentage: 0.27 }],
+    }).invoiceMain.invoice!;
+    const amounts = invoice.invoiceLines!.line[0]!.lineAmountsNormal!;
+    // 1270 gross at 27% => 1000 net, 270 VAT, and it still validates + reconciles.
+    expect(amounts.lineNetAmountData.lineNetAmount).toBe('1000.00');
+    expect(amounts.lineVatData!.lineVatAmount).toBe('270.00');
+    expect(amounts.lineGrossAmountData!.lineGrossAmountNormal).toBe('1270.00');
+    expect(
+      validateInvoice(buildInvoice({ ...input, priceMode: 'gross' }), { operation: 'CREATE' })
+        .errors,
+    ).toEqual([]);
+  });
+
+  it('marks a periodic-settlement delivery period', () => {
+    const detail = buildInvoice({
+      ...input,
+      deliveryPeriod: { start: '2026-03-01', end: '2026-03-31' },
+    }).invoiceMain.invoice!.invoiceHead.invoiceDetail;
+    expect(detail.invoiceDeliveryPeriodStart).toBe('2026-03-01');
+    expect(detail.invoiceDeliveryPeriodEnd).toBe('2026-03-31');
+    expect(detail.periodicalSettlement).toBe(true);
+  });
+
+  it('carries order numbers and conventional invoice info', () => {
+    const detail = buildInvoice({ ...input, orderNumbers: ['PO-1', 'PO-2'] }).invoiceMain.invoice!
+      .invoiceHead.invoiceDetail;
+    expect(detail.conventionalInvoiceInfo?.orderNumbers?.orderNumber).toEqual(['PO-1', 'PO-2']);
+  });
+
+  it('carries structured additional data on the invoice and lines, and validates', () => {
+    const built = buildInvoice({
+      ...input,
+      additionalData: [
+        { dataName: 'K12345_NOTE', dataDescription: 'Megjegyzés', dataValue: 'invoice note' },
+      ],
+      lines: [
+        {
+          description: 'Widget',
+          quantity: 1,
+          unitPrice: 1000,
+          vatPercentage: 0.27,
+          additionalData: [
+            {
+              dataName: 'K12345_LINE',
+              dataDescription: 'Tétel megjegyzés',
+              dataValue: 'line note',
+            },
+          ],
+        },
+      ],
+    });
+    const invoice = built.invoiceMain.invoice!;
+    expect(invoice.invoiceHead.invoiceDetail.additionalInvoiceData?.[0]?.dataValue).toBe(
+      'invoice note',
+    );
+    expect(invoice.invoiceLines!.line[0]!.additionalLineData?.[0]?.dataValue).toBe('line note');
+    expect(validateInvoice(built, { operation: 'CREATE' }).errors).toEqual([]);
+    // Survives the XML round trip (serializer orders the new fields correctly).
+    expect(parseDocument(serializeDocument('InvoiceData', built)).value).toEqual(built);
+  });
+
   it('carries a foreign currency with its HUF twins at the exchange rate', () => {
     const invoice = buildInvoice({
       ...input,
