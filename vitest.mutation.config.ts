@@ -12,6 +12,7 @@ export default defineConfig({
       'packages/core/test/decimal.property.test.ts',
       'packages/core/test/summary.test.ts',
       'packages/core/test/summary.property.test.ts',
+      'packages/core/test/summary.mutants.test.ts',
     ],
   },
 });

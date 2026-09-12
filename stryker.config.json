@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
-  "_comment": "Mutation testing for the highest-consequence logic: the exact-decimal core and the VAT-summary reconciliation. Run with `pnpm mutation`. Not a CI gate — it is slow — but it proves the money tests catch regressions rather than only executing lines. Baseline: ~76% overall (decimal.ts ~81%, summary.ts ~71%); the break threshold guards against dropping below 70.",
+  "_comment": "Mutation testing for the highest-consequence logic: the exact-decimal core and the VAT-summary reconciliation. Run with `pnpm mutation`. Not a CI gate — it is slow — but it proves the money tests catch regressions rather than only executing lines. Baseline: ~78% overall (decimal.ts ~81%, summary.ts ~75%); the break threshold guards against dropping below 70.",
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],
   "vitest": { "configFile": "vitest.mutation.config.ts" },
