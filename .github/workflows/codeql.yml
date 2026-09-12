@@ -25,9 +25,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: javascript-typescript
 
       # JS/TS needs no build step for CodeQL; it analyses the source directly.
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@v4
