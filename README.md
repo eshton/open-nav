@@ -9,11 +9,10 @@ NAV accepts, reporting it, and pulling invoices issued to you.
 [![node](https://img.shields.io/node/v/@open-nav/core.svg)](https://nodejs.org)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> **Status: early development.** The packages are release-ready but not yet
-> on npm — the scope is reserved and the pipeline is in place, see
-> [Installing](#installing). The API surface will change without notice, and
-> nothing here has been exercised against NAV's live test system yet — see
-> [Verification status](#verification-status).
+> **Status: pre-1.0.** Published on npm (see [Installing](#installing)). The
+> query and pull operations are verified against NAV's live test system;
+> invoice submission has not been exercised there yet, and the API may still
+> change ahead of 1.0 — see [Verification status](#verification-status).
 
 📖 **API reference:** [eshton.github.io/open-nav](https://eshton.github.io/open-nav/) —
 generated from the source with TypeDoc.
@@ -123,7 +122,7 @@ Being explicit, because it matters for anyone considering this in production:
 | MCP server                     | Driven by a real MCP client, and the built binary driven over stdio                                                                                                          |
 | Exchange token decryption      | Round-trip tested for padded and unpadded tokens; no official vector exists                                                                                                  |
 | Published packages             | Every tarball passes `publint` and `attw`, and all six were installed from tarballs into a clean project and exercised end to end                                            |
-| Live NAV test system           | **Not yet exercised** — no technical user credentials                                                                                                                        |
+| Live NAV test system           | Query and pull (outbound + inbound) verified against the live test system; invoice submission (`manageInvoice`) not yet exercised there                                      |
 
 ## Building an invoice
 
