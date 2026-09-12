@@ -23,6 +23,7 @@ import {
   loadTheme,
   renderInvoiceHtml,
   renderInvoicePdf,
+  type DocumentType,
   type InvoiceTheme,
 } from '@open-nav/invoicing';
 import { EXIT, UsageError, type ExitCode } from './errors.js';
@@ -118,6 +119,23 @@ function resolveThemeFlags(
     theme.logo = { ...theme.logo, src: embedImage(logoPath, read(logoPath)) };
   }
   return theme;
+}
+
+/** Parse the --type flag into a DocumentType, accepting kebab-case. */
+function parseDocumentType(value: string | boolean | undefined): DocumentType {
+  if (value === undefined) return 'invoice';
+  const map: Record<string, DocumentType> = {
+    invoice: 'invoice',
+    proforma: 'proforma',
+    'delivery-note': 'deliveryNote',
+    deliverynote: 'deliveryNote',
+    receipt: 'receipt',
+  };
+  const type = map[String(value).toLowerCase()];
+  if (!type) {
+    throw new UsageError('--type must be invoice, proforma, delivery-note or receipt');
+  }
+  return type;
 }
 
 /** An invoice number can contain characters a file name cannot. */
@@ -578,9 +596,13 @@ export const COMMANDS: CommandDefinition[] = [
     name: 'render',
     summary: 'Render an invoice as a printable HTML or PDF document',
     usage:
-      'open-nav render <file.xml> [--pdf file.pdf] [--out file.html] [--theme theme.json] [--logo logo.png] [--engine native|browser] [--language hu|en] [--note text]',
+      'open-nav render <file.xml> [--type invoice|proforma|delivery-note|receipt] [--pdf file.pdf] [--out file.html] [--theme theme.json] [--logo logo.png] [--engine native|browser] [--language hu|en] [--note text]',
     needsCredentials: false,
     options: [
+      {
+        flag: '--type',
+        description: 'invoice (default), proforma, delivery-note or receipt',
+      },
       { flag: '--pdf', description: 'Write a PDF, converting with a local browser' },
       { flag: '--out', description: 'Write HTML here instead of standard output' },
       { flag: '--theme', description: 'JSON theme: logo, colours, fonts, page setup, footer' },
@@ -601,9 +623,12 @@ export const COMMANDS: CommandDefinition[] = [
       }
       const language: 'hu' | 'en' = requested;
 
+      const documentType = parseDocumentType(flags['type']);
+
       const theme = resolveThemeFlags(flags, context);
       const renderOptions = {
         language,
+        documentType,
         ...(theme ? { theme } : {}),
         ...(flags['note'] ? { note: String(flags['note']) } : {}),
       };
@@ -635,6 +660,7 @@ export const COMMANDS: CommandDefinition[] = [
           pdf: pdfPath,
           bytes: pdf.length,
           language,
+          type: documentType,
           engine,
           ...(out ? { out } : {}),
         };
@@ -653,7 +679,7 @@ export const COMMANDS: CommandDefinition[] = [
       }
 
       writeOutput(out, html, context);
-      const data = { file: path, out, bytes: html.length, language };
+      const data = { file: path, out, bytes: html.length, language, type: documentType };
       writeResult(context.writer, context.format, 'render', data, () => [
         `Wrote ${out} (${html.length} bytes).`,
         `For a PDF instead:  open-nav render ${path} --pdf invoice.pdf`,

@@ -7,13 +7,28 @@ import {
   formatTaxNumber,
   type DocumentLanguage,
 } from './format.js';
-import { documentTitle, label, paymentMethodLabel, unitLabel } from './labels.js';
+import { label, paymentMethodLabel, unitLabel } from './labels.js';
+import {
+  documentDisplay,
+  documentHeading,
+  lineColumns,
+  type DocumentType,
+  type LineColumn,
+} from './documents.js';
 import { deriveMarkings } from './markings.js';
 import { buildStyles, resolveTheme, type InvoiceTheme, type ResolvedTheme } from './theme.js';
 
 export interface RenderOptions {
   /** Document language. Hungarian by default, as the law prescribes. */
   language?: DocumentLanguage;
+  /**
+   * The kind of document to render. Defaults to `invoice` (the tax invoice).
+   * `proforma`, `deliveryNote` and `receipt` are printable business documents
+   * rendered from the same data but reported nowhere through Online Számla;
+   * they drop the money detail they should not show and carry a "not a tax
+   * invoice" note instead of the NAV-provenance note. See {@link DocumentType}.
+   */
+  documentType?: DocumentType;
   /** Extra note printed under the totals, e.g. payment instructions. */
   note?: string;
   /**
@@ -75,6 +90,30 @@ ${body}
 `;
 }
 
+/** Render a proforma invoice (díjbekérő) — a payment request, not a tax invoice. */
+export function renderProformaHtml(
+  document: InvoiceData,
+  options: Omit<RenderOptions, 'documentType'> = {},
+): string {
+  return renderInvoiceHtml(document, { ...options, documentType: 'proforma' });
+}
+
+/** Render a delivery note (szállítólevél) — goods delivered, no prices. */
+export function renderDeliveryNoteHtml(
+  document: InvoiceData,
+  options: Omit<RenderOptions, 'documentType'> = {},
+): string {
+  return renderInvoiceHtml(document, { ...options, documentType: 'deliveryNote' });
+}
+
+/** Render a receipt (nyugta) — simplified proof of payment showing the gross total. */
+export function renderReceiptHtml(
+  document: InvoiceData,
+  options: Omit<RenderOptions, 'documentType'> = {},
+): string {
+  return renderInvoiceHtml(document, { ...options, documentType: 'receipt' });
+}
+
 function renderInvoice(
   document: InvoiceData,
   invoice: InvoiceType,
@@ -86,7 +125,10 @@ function renderInvoice(
   const currency = detail.currencyCode;
   const isModification = invoice.invoiceReference !== undefined;
   const lines = invoice.invoiceLines?.line ?? [];
-  const markings = deriveMarkings(invoice, language);
+  const documentType = options.documentType ?? 'invoice';
+  const display = documentDisplay(documentType);
+  const markings = display.markings ? deriveMarkings(invoice, language) : [];
+  const columns = lineColumns(display.lineMoney);
 
   const metaRows: Array<[string, string]> = [
     [label('invoiceNumber', language), document.invoiceNumber],
@@ -134,8 +176,9 @@ function renderInvoice(
     <div class="brand">
       ${logo}
       <div>
-        <h1>${escapeHtml(documentTitle(detail.invoiceCategory, isModification, language))}</h1>
+        <h1>${escapeHtml(documentHeading(documentType, detail.invoiceCategory, isModification, language))}</h1>
         ${markings.length > 0 ? `<div class="subtitle">${markings.map((marking) => escapeHtml(marking.text)).join(' · ')}</div>` : ''}
+        ${display.disclaimerKey ? `<div class="disclaimer">${escapeHtml(label(display.disclaimerKey, language))}</div>` : ''}
       </div>
     </div>
     <div class="meta">
@@ -153,12 +196,12 @@ function renderInvoice(
     ${renderParty(label('customer', language), customerFields(invoice, language), [])}
   </section>
 
-  ${renderLines(lines, currency, language)}
-  ${renderTotals(invoice, currency, language)}
-  ${renderVatSummary(invoice, currency, language)}
+  ${renderLines(lines, currency, language, columns)}
+  ${renderTotals(invoice, currency, language, display.totals)}
+  ${display.vatSummary ? renderVatSummary(invoice, currency, language) : ''}
   ${renderMarkings(markings, language)}
   ${options.note ? `<div class="note">${escapeHtml(options.note)}</div>` : ''}
-  ${renderFooter(theme, options, language)}
+  ${renderFooter(theme, options, language, display.provenance)}
 </article>`;
 }
 
@@ -194,8 +237,11 @@ function renderFooter(
   theme: ResolvedTheme,
   options: RenderOptions,
   language: DocumentLanguage,
+  provenanceAllowed: boolean,
 ): string {
-  const showProvenance = options.provenanceNote ?? theme.provenanceNote;
+  // A non-tax document was never reported, so the provenance note never applies
+  // to it, whatever the option or theme says.
+  const showProvenance = provenanceAllowed && (options.provenanceNote ?? theme.provenanceNote);
   const lines = [
     ...theme.footerLines.map((line) => escapeHtml(line)),
     ...(showProvenance ? [escapeHtml(label('notReported', language))] : []),
@@ -296,45 +342,97 @@ function vatRateText(rate: VatRateType | undefined, language: DocumentLanguage):
   return '';
 }
 
-function renderLines(lines: LineType[], currency: string, language: DocumentLanguage): string {
+/** Whether a column holds a right-aligned number. */
+const NUMERIC_COLUMN: Record<LineColumn, boolean> = {
+  lineNumber: true,
+  description: false,
+  quantity: true,
+  unit: false,
+  unitPrice: true,
+  net: true,
+  vatRate: true,
+  vatAmount: true,
+  gross: true,
+};
+
+function columnHeader(column: LineColumn, currency: string, language: DocumentLanguage): string {
+  switch (column) {
+    case 'net':
+      return `${label('netAmount', language)} (${currency})`;
+    case 'vatRate':
+      return label('vatRate', language);
+    case 'vatAmount':
+      return label('vatAmount', language);
+    case 'gross':
+      return label('grossAmount', language);
+    case 'unitPrice':
+      return label('unitPrice', language);
+    default:
+      return label(column, language);
+  }
+}
+
+function columnCell(column: LineColumn, line: LineType, language: DocumentLanguage): string {
+  const normal = line.lineAmountsNormal;
+  const simplified = line.lineAmountsSimplified;
+  switch (column) {
+    case 'lineNumber':
+      return String(line.lineNumber);
+    case 'description':
+      return line.lineDescription ?? '';
+    case 'quantity':
+      return line.quantity ? formatAmount(line.quantity, language, decimalsOf(line.quantity)) : '';
+    case 'unit':
+      return unitLabel(line.unitOfMeasure, line.unitOfMeasureOwn, language);
+    case 'unitPrice':
+      return line.unitPrice
+        ? formatAmount(line.unitPrice, language, decimalsOf(line.unitPrice))
+        : '';
+    case 'net':
+      return normal ? formatAmount(normal.lineNetAmountData.lineNetAmount, language) : '';
+    case 'vatRate':
+      return vatRateText(normal?.lineVatRate ?? simplified?.lineVatRate, language);
+    case 'vatAmount':
+      return normal?.lineVatData ? formatAmount(normal.lineVatData.lineVatAmount, language) : '';
+    case 'gross': {
+      const gross =
+        normal?.lineGrossAmountData?.lineGrossAmountNormal ?? simplified?.lineGrossAmountSimplified;
+      return gross ? formatAmount(gross, language) : '';
+    }
+  }
+}
+
+function renderLines(
+  lines: LineType[],
+  currency: string,
+  language: DocumentLanguage,
+  columns: LineColumn[],
+): string {
   if (lines.length === 0) return '';
+
+  const head = columns
+    .map(
+      (column) =>
+        `<th${NUMERIC_COLUMN[column] ? ' class="num"' : ''}>${escapeHtml(columnHeader(column, currency, language))}</th>`,
+    )
+    .join('\n        ');
 
   const rows = lines
     .map((line) => {
-      const normal = line.lineAmountsNormal;
-      const simplified = line.lineAmountsSimplified;
-      const rate = normal?.lineVatRate ?? simplified?.lineVatRate;
-      const net = normal?.lineNetAmountData.lineNetAmount;
-      const vat = normal?.lineVatData?.lineVatAmount;
-      const gross =
-        normal?.lineGrossAmountData?.lineGrossAmountNormal ?? simplified?.lineGrossAmountSimplified;
-
-      return `<tr>
-        <td class="num">${line.lineNumber}</td>
-        <td>${escapeHtml(line.lineDescription ?? '')}</td>
-        <td class="num">${line.quantity ? escapeHtml(formatAmount(line.quantity, language, decimalsOf(line.quantity))) : ''}</td>
-        <td>${escapeHtml(unitLabel(line.unitOfMeasure, line.unitOfMeasureOwn, language))}</td>
-        <td class="num">${line.unitPrice ? escapeHtml(formatAmount(line.unitPrice, language, decimalsOf(line.unitPrice))) : ''}</td>
-        <td class="num">${net ? escapeHtml(formatAmount(net, language)) : ''}</td>
-        <td class="num">${escapeHtml(vatRateText(rate, language))}</td>
-        <td class="num">${vat ? escapeHtml(formatAmount(vat, language)) : ''}</td>
-        <td class="num">${gross ? escapeHtml(formatAmount(gross, language)) : ''}</td>
-      </tr>`;
+      const cells = columns
+        .map(
+          (column) =>
+            `<td${NUMERIC_COLUMN[column] ? ' class="num"' : ''}>${escapeHtml(columnCell(column, line, language))}</td>`,
+        )
+        .join('');
+      return `<tr>${cells}</tr>`;
     })
     .join('\n      ');
 
   return `<table>
     <thead>
       <tr>
-        <th class="num">${escapeHtml(label('lineNumber', language))}</th>
-        <th>${escapeHtml(label('description', language))}</th>
-        <th class="num">${escapeHtml(label('quantity', language))}</th>
-        <th>${escapeHtml(label('unit', language))}</th>
-        <th class="num">${escapeHtml(label('unitPrice', language))}</th>
-        <th class="num">${escapeHtml(label('netAmount', language))} (${escapeHtml(currency)})</th>
-        <th class="num">${escapeHtml(label('vatRate', language))}</th>
-        <th class="num">${escapeHtml(label('vatAmount', language))}</th>
-        <th class="num">${escapeHtml(label('grossAmount', language))}</th>
+        ${head}
       </tr>
     </thead>
     <tbody>
@@ -350,13 +448,19 @@ function decimalsOf(value: string): number {
   return fraction.replace(/0+$/, '').length;
 }
 
-function renderTotals(invoice: InvoiceType, currency: string, language: DocumentLanguage): string {
+function renderTotals(
+  invoice: InvoiceType,
+  currency: string,
+  language: DocumentLanguage,
+  mode: 'full' | 'grossOnly' | 'none',
+): string {
+  if (mode === 'none') return '';
   const summary = invoice.invoiceSummary;
   const normal = summary.summaryNormal;
   const gross = summary.summaryGrossData;
   const rows: string[] = [];
 
-  if (normal) {
+  if (normal && mode === 'full') {
     rows.push(
       row(label('totalNet', language), formatAmount(normal.invoiceNetAmount, language), currency),
       row(label('totalVat', language), formatAmount(normal.invoiceVatAmount, language), currency),

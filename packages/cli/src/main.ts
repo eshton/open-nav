@@ -61,6 +61,7 @@ export async function run(options: RunOptions): Promise<ExitCode> {
         'skip-validation': { type: 'boolean' },
         out: { type: 'string' },
         note: { type: 'string' },
+        type: { type: 'string' },
         pdf: { type: 'string' },
         theme: { type: 'string' },
         logo: { type: 'string' },

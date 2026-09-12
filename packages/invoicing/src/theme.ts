@@ -252,6 +252,7 @@ export function buildStyles(theme: ResolvedTheme): string {
   .logo { display: block; max-width: 70mm; max-height: 26mm; }
   h1 { margin: 0; font-size: 2em; letter-spacing: 0.08em; font-weight: 700; color: var(--accent); }
   .subtitle { color: var(--muted); font-size: 0.9em; margin-top: 2mm; }
+  .disclaimer { color: var(--muted); font-size: 0.85em; font-style: italic; margin-top: 1mm; }
   .meta { text-align: right; font-size: 0.95em; min-width: 64mm; }
   .meta div { margin-bottom: 1mm; }
   .meta .value { font-weight: 700; white-space: nowrap; }

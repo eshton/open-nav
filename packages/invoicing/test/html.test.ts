@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { renderInvoiceHtml } from '../src/html.js';
+import {
+  renderDeliveryNoteHtml,
+  renderInvoiceHtml,
+  renderProformaHtml,
+  renderReceiptHtml,
+} from '../src/html.js';
 import { allSamples, sample } from './fixtures.js';
 
 describe('renderInvoiceHtml', () => {
@@ -102,6 +107,48 @@ describe('renderInvoiceHtml', () => {
       provenanceNote: false,
     });
     expect(without).not.toContain('megjelenítés');
+  });
+
+  describe('non-invoice document types', () => {
+    const src = 'belfoldi-ertekesites-tobb-afa-tipus.xml'; // multi-rate, so it has a VAT breakdown
+
+    it('renders a proforma with a not-a-tax-invoice disclaimer and no provenance note', () => {
+      const html = renderProformaHtml(sample(src));
+      expect(html).toContain('DÍJBEKÉRŐ');
+      expect(html).toContain('nem számla');
+      // Proforma keeps the money detail (it is a payment request)...
+      expect(html).toContain('Áfa-összesítő');
+      expect(html).toContain('Nettó összesen');
+      // ...but was never reported, so no NAV-provenance note and no statutory markings.
+      expect(html).not.toContain('megjelenítés');
+      expect(html).not.toContain('Jogszabályi jelölések');
+    });
+
+    it('renders a delivery note without any prices', () => {
+      const html = renderDeliveryNoteHtml(sample(src));
+      expect(html).toContain('SZÁLLÍTÓLEVÉL');
+      // Quantities stay; money columns and totals are gone.
+      expect(html).toContain('Mennyiség');
+      expect(html).not.toContain('Egységár');
+      expect(html).not.toContain('Nettó érték');
+      expect(html).not.toContain('Áfa-összesítő');
+      expect(html).not.toContain('<div class="totals">');
+    });
+
+    it('renders a receipt showing the gross total only', () => {
+      const html = renderReceiptHtml(sample(src));
+      expect(html).toContain('NYUGTA');
+      expect(html).toContain('nem számla');
+      // Gross stays; the net/VAT breakdown is dropped from lines and totals.
+      expect(html).toContain('Bruttó érték');
+      expect(html).toContain('Bruttó összesen');
+      expect(html).not.toContain('Nettó összesen');
+      expect(html).not.toContain('Áfa érték');
+    });
+
+    it('a plain invoice still carries the provenance note (default type unchanged)', () => {
+      expect(renderInvoiceHtml(sample(src))).toContain('megjelenítés');
+    });
   });
 
   it('shows a VAT breakdown only when there is more than one rate', () => {

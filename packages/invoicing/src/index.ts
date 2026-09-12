@@ -1,5 +1,6 @@
 export * from './format.js';
 export * from './labels.js';
+export * from './documents.js';
 export * from './markings.js';
 export * from './theme.js';
 export * from './html.js';
