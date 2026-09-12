@@ -1,6 +1,6 @@
 {
   "name": "@open-nav/mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server exposing the Hungarian NAV Online Számla invoice service to AI agents",
   "keywords": [
     "nav",
