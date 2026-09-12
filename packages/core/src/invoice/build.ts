@@ -3,6 +3,7 @@ import { computeInvoiceSummary } from '../money/summary.js';
 import { parseTaxNumber } from '../validation/tax-number.js';
 import type {
   AdditionalDataType,
+  AdvanceDataType,
   InvoiceData,
   InvoiceDetailType,
   InvoiceType,
@@ -61,6 +62,27 @@ export interface BuildLine {
   vatPercentage: number | string;
   /** Defaults to `PRODUCT`. */
   nature?: 'PRODUCT' | 'SERVICE' | 'OTHER';
+  /**
+   * Mark this line as an advance (előleg) charge (`advanceData`).
+   *
+   * - `true` reports the advance itself — a line of an advance invoice
+   *   (előlegszámla). NAV's advance-invoice lines carry only the net amount and
+   *   the VAT rate; the builder omits `lineVatData`/`lineGrossAmountData` for
+   *   these lines (the summary still derives the VAT from the rate).
+   * - An object additionally references the advance invoice that already
+   *   reported the payment — the advance-deduction line of a final invoice
+   *   (végszámla). Such a line's amounts are the caller's to make negative.
+   */
+  advance?:
+    | boolean
+    | {
+        /** Number of the advance invoice that reported the payment. */
+        originalInvoice: string;
+        /** Date the advance was paid, `yyyy-mm-dd`. */
+        paymentDate: string;
+        /** Exchange rate applied to the advance. Defaults to the invoice rate. */
+        exchangeRate?: number | string;
+      };
   /**
    * Conventionally named extra data for this line (`additionalLineData`). NAV
    * has no free-text line note; a "Tétel megjegyzés" must be a structured field
@@ -141,8 +163,16 @@ export function buildInvoice(input: BuildInvoiceInput): InvoiceData {
     const vat = net.multiply(vatPercentage).round(MONETARY_SCALE);
     const gross = net.add(vat);
 
+    // A pure advance line (advanceIndicator with no payment reference) reports
+    // only its net amount and the VAT rate, as NAV's advance-invoice sample
+    // does; the summary derives the VAT. A deduction line on a final invoice
+    // carries the full amounts (negated by the caller).
+    const advanceData = advanceOf(entry.advance, rate);
+    const bareAdvance = entry.advance === true;
+
     return {
       lineNumber: index + 1,
+      ...(advanceData ? { advanceData } : {}),
       lineExpressionIndicator: true,
       lineNatureIndicator: entry.nature ?? 'PRODUCT',
       lineDescription: entry.description,
@@ -156,14 +186,18 @@ export function buildInvoice(input: BuildInvoiceInput): InvoiceData {
           lineNetAmountHUF: toHuf(net),
         },
         lineVatRate: { vatPercentage: vatPercentage.toString() },
-        lineVatData: {
-          lineVatAmount: vat.toString(),
-          lineVatAmountHUF: toHuf(vat),
-        },
-        lineGrossAmountData: {
-          lineGrossAmountNormal: gross.toString(),
-          lineGrossAmountNormalHUF: toHuf(gross),
-        },
+        ...(bareAdvance
+          ? {}
+          : {
+              lineVatData: {
+                lineVatAmount: vat.toString(),
+                lineVatAmountHUF: toHuf(vat),
+              },
+              lineGrossAmountData: {
+                lineGrossAmountNormal: gross.toString(),
+                lineGrossAmountNormalHUF: toHuf(gross),
+              },
+            }),
       },
       ...(entry.additionalData?.length ? { additionalLineData: entry.additionalData } : {}),
     };
@@ -215,6 +249,39 @@ export function buildInvoice(input: BuildInvoiceInput): InvoiceData {
     invoiceIssueDate: input.issueDate,
     completenessIndicator: false,
     invoiceMain: { invoice },
+  };
+}
+
+/**
+ * Build an advance invoice (előlegszámla).
+ *
+ * An advance invoice reports a prepayment: a NORMAL invoice whose lines are
+ * advance charges (`advanceData.advanceIndicator`). Any line not already marked
+ * is marked as an advance. Later, the final invoice (végszámla) settles it —
+ * build that with `buildInvoice`, adding a deduction line per advance whose
+ * `advance` option references this invoice's number and whose amounts are
+ * negative.
+ */
+export function buildAdvanceInvoice(input: BuildInvoiceInput): InvoiceData {
+  return buildInvoice({
+    ...input,
+    lines: input.lines.map((entry) => ({ ...entry, advance: entry.advance ?? true })),
+  });
+}
+
+function advanceOf(
+  advance: BuildLine['advance'],
+  invoiceRate: Decimal,
+): AdvanceDataType | undefined {
+  if (!advance) return undefined;
+  if (advance === true) return { advanceIndicator: true };
+  return {
+    advanceIndicator: true,
+    advancePaymentData: {
+      advanceOriginalInvoice: advance.originalInvoice,
+      advancePaymentDate: advance.paymentDate,
+      advanceExchangeRate: Decimal.from(advance.exchangeRate ?? invoiceRate).toString(),
+    },
   };
 }
 
