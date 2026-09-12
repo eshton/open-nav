@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "test:workers": "vitest run --config vitest.workers.config.ts",
     "coverage": "vitest run --coverage",
+    "mutation": "stryker run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "verify": "pnpm format:check && pnpm licences && pnpm typecheck && pnpm test && pnpm check:packages",
@@ -34,6 +35,8 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
     "@cloudflare/vitest-pool-workers": "^0.8.63",
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/vitest-runner": "^10.0.0",
     "@types/node": "^22.10.2",
     "@vitest/coverage-v8": "3.2.7",
     "esbuild": "^0.28.2",
