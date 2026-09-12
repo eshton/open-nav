@@ -12,3 +12,5 @@ coverage/
 dist-packages/
 docs-site/
 deno.lock
+.stryker-tmp/
+reports/
