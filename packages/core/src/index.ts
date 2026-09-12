@@ -1,6 +1,7 @@
 export * from './constants.js';
 export * from './errors.js';
 export * from './time.js';
+export * from './software.js';
 export * from './crypto/provider.js';
 export * from './crypto/node-provider.js';
 // The Web provider lives at the `@open-nav/core/web` entry (see ./web.ts), so

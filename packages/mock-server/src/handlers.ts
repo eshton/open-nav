@@ -55,7 +55,7 @@ export interface HandlerResult {
 }
 
 const SOFTWARE: SoftwareType = {
-  softwareId: 'OPENNAVMOCK000001',
+  softwareId: 'OPENNAVMOCK0000001',
   softwareName: 'open-nav mock server',
   softwareOperation: 'LOCAL_SOFTWARE',
   softwareMainVersion: '0.1.0',

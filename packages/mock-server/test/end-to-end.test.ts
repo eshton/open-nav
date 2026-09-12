@@ -39,7 +39,7 @@ const CREDENTIALS: NavCredentials = {
 };
 
 const SOFTWARE: SoftwareType = {
-  softwareId: 'OPENNAVTEST000001',
+  softwareId: 'OPENNAVTEST0000001',
   softwareName: 'open-nav end to end',
   softwareOperation: 'LOCAL_SOFTWARE',
   softwareMainVersion: '0.1.0',

@@ -50,7 +50,7 @@ const CREDENTIALS: NavCredentials = {
 };
 
 const SOFTWARE: SoftwareType = {
-  softwareId: 'OPENNAVPULL00001',
+  softwareId: 'OPENNAVPULL0000001',
   softwareName: 'open-nav pull test',
   softwareOperation: 'LOCAL_SOFTWARE',
   softwareMainVersion: '0.1.0',

@@ -30,7 +30,7 @@ const CREDENTIALS: NavCredentials = {
 };
 
 const SOFTWARE: SoftwareType = {
-  softwareId: 'OPENNAVMCP0000001',
+  softwareId: 'OPENNAVMCP00000001',
   softwareName: 'open-nav mcp test',
   softwareOperation: 'LOCAL_SOFTWARE',
   softwareMainVersion: '0.1.0',
@@ -379,7 +379,7 @@ describe('configuration', () => {
       NAV_SIGN_KEY: 's',
       NAV_EXCHANGE_KEY: '0123456789abcdef',
       NAV_TAX_NUMBER: '99999999',
-      NAV_SOFTWARE_ID: 'OPENNAVMCP0000001',
+      NAV_SOFTWARE_ID: 'OPENNAVMCP00000001',
     });
     expect(config.missing).toEqual([]);
     expect(config.credentials?.login).toBe('mcplogin1234');
