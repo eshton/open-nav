@@ -1,0 +1,33 @@
+name: CodeQL
+
+# Static analysis for JavaScript/TypeScript. Findings appear under the
+# repository's Security tab.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '31 3 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+
+      # JS/TS needs no build step for CodeQL; it analyses the source directly.
+      - uses: github/codeql-action/analyze@v3

@@ -1,0 +1,20 @@
+version: 2
+
+updates:
+  # Library and tooling dependencies. One npm entry covers the whole pnpm
+  # workspace, since Dependabot reads the root pnpm-lock.yaml.
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      # Dev-only tooling churns often; batch it into one PR to cut noise.
+      dev-dependencies:
+        dependency-type: development
+
+  # The workflow actions themselves (checkout, setup-node, pnpm, CodeQL, ...).
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
