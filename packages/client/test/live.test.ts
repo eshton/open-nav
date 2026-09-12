@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildInvoice,
-  computeInvoiceSummary,
+  buildStorno,
   hungarianToday,
-  Decimal,
   type InvoiceData,
   type SoftwareType,
 } from '@open-nav/core';
@@ -183,51 +182,6 @@ live('live NAV test system', () => {
     }
   };
 
-  const negate = (obj: Record<string, string>, key: string): void => {
-    obj[key] = Decimal.from(obj[key]!).negate().toString();
-  };
-
-  /** A STORNO of a created invoice: reverse every amount, reference the original. */
-  const stornoOf = (created: InvoiceData, newNumber: string): InvoiceData => {
-    const doc = structuredClone(created);
-    doc.invoiceNumber = newNumber;
-    const invoice = doc.invoiceMain.invoice!;
-    invoice.invoiceReference = {
-      originalInvoiceNumber: created.invoiceNumber,
-      modifyWithoutMaster: false,
-      modificationIndex: 1,
-    };
-    // NAV requires lineOperation CREATE on every line of a modifying/cancelling
-    // report (INVALID_LINE_OPERATION otherwise). The precise chain line-
-    // numbering for a storno follows NAV's modification spec — tracked
-    // separately; this exercises the client round trip and NAV's verdict.
-    for (const line of invoice.invoiceLines!.line) {
-      line.lineModificationReference = {
-        lineNumberReference: line.lineNumber,
-        lineOperation: 'CREATE',
-      };
-      const amounts = line.lineAmountsNormal!;
-      negate(amounts.lineNetAmountData as unknown as Record<string, string>, 'lineNetAmount');
-      negate(amounts.lineNetAmountData as unknown as Record<string, string>, 'lineNetAmountHUF');
-      if (amounts.lineVatData) {
-        negate(amounts.lineVatData as unknown as Record<string, string>, 'lineVatAmount');
-        negate(amounts.lineVatData as unknown as Record<string, string>, 'lineVatAmountHUF');
-      }
-      if (amounts.lineGrossAmountData) {
-        negate(
-          amounts.lineGrossAmountData as unknown as Record<string, string>,
-          'lineGrossAmountNormal',
-        );
-        negate(
-          amounts.lineGrossAmountData as unknown as Record<string, string>,
-          'lineGrossAmountNormalHUF',
-        );
-      }
-    }
-    invoice.invoiceSummary = computeInvoiceSummary(invoice);
-    return doc;
-  };
-
   it('submits an invoice and reaches a verdict', { timeout: 120_000 }, async () => {
     const client = makeClient();
     const number = `ONAV-LIVE-${Date.now()}`;
@@ -246,7 +200,7 @@ live('live NAV test system', () => {
     const create = await client.submitInvoices([{ operation: 'CREATE', invoice: created }]);
     await waitForTransaction(client, create.transactionId);
 
-    const storno = stornoOf(created, `ONAV-STRN-${Date.now()}`);
+    const storno = buildStorno(created, { invoiceNumber: `ONAV-STRN-${Date.now()}` });
     const { transactionId } = await client.submitInvoices([
       { operation: 'STORNO', invoice: storno },
     ]);
