@@ -45,7 +45,32 @@ jobs:
       # and the workspace: rewriting only take effect at pack time.
       - run: pnpm check:packages
 
+      # Guard that the core main entry never re-bundles the @noble Web provider.
+      - run: pnpm check:bundle
+
       # The end-to-end example doubles as an integration smoke test across
       # core, client, invoicing and the mock service. check:packages built the
       # dist it imports.
       - run: node examples/report-invoice.mjs
+
+  # Coverage runs on its own so the matrix stays fast; the thresholds in
+  # vitest.config.ts fail the build on a regression. ubuntu ships Chrome, so
+  # the browser PDF tests run here too.
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.x'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Tests import the packages by their built entry points, so build first.
+      - run: pnpm build
+
+      - run: pnpm coverage

@@ -27,6 +27,7 @@
     "licences:fix": "node scripts/check-licences.mjs --fix",
     "pack": "pnpm build && node scripts/pack-packages.mjs",
     "check:packages": "pnpm build && node scripts/check-packages.mjs",
+    "check:bundle": "node scripts/check-core-bundle.mjs",
     "version:set": "node scripts/set-version.mjs",
     "publish:packages": "pnpm build && node scripts/publish-packages.mjs"
   },
@@ -34,6 +35,8 @@
     "@arethetypeswrong/cli": "^0.18.5",
     "@cloudflare/vitest-pool-workers": "^0.8.63",
     "@types/node": "^22.10.2",
+    "@vitest/coverage-v8": "3.2.7",
+    "esbuild": "^0.28.2",
     "fast-check": "^4.10.0",
     "prettier": "^3.4.2",
     "publint": "^0.3.24",
