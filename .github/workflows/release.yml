@@ -11,7 +11,8 @@ on:
         default: true
 
 permissions:
-  contents: read
+  # Write, so the workflow can create the GitHub Release with generated notes.
+  contents: write
   # Required for npm provenance and for trusted publishing (OIDC). Without it
   # the publish still works, but the packages come out unattested.
   id-token: write
@@ -75,3 +76,17 @@ jobs:
           dry=""
           if [ "${{ inputs.dry-run }}" = "true" ]; then dry="--dry-run"; fi
           node scripts/publish-packages.mjs --tag "$tag" $dry
+
+      # A GitHub Release with notes generated from the merged PRs, categorised
+      # by .github/release.yml. Tag pushes only; the manual dry-run does not
+      # publish, so it does not cut a release either. A prerelease tag is marked
+      # as such so it does not show as the latest.
+      - name: Create the GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          prerelease=""
+          case "$version" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes $prerelease
