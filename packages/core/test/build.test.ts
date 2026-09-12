@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildAdvanceInvoice,
   buildInvoice,
   buildStorno,
   checkInvoiceSummary,
@@ -199,6 +200,55 @@ describe('buildInvoice', () => {
     expect(validateInvoice(built, { operation: 'CREATE' }).errors).toEqual([]);
     // Survives the XML round trip (serializer orders the new fields correctly).
     expect(parseDocument(serializeDocument('InvoiceData', built)).value).toEqual(built);
+  });
+
+  it('builds an advance invoice with advance-marked lines and a derived VAT summary', () => {
+    const built = buildAdvanceInvoice({
+      ...input,
+      lines: [
+        { description: 'konyhabútor előleg', quantity: 1, unitPrice: 500000, vatPercentage: 0.27 },
+      ],
+    });
+    const line = built.invoiceMain.invoice!.invoiceLines!.line[0]!;
+    // Advance line: advanceIndicator set, and only net + VAT rate on the line.
+    expect(line.advanceData?.advanceIndicator).toBe(true);
+    expect(line.lineAmountsNormal!.lineNetAmountData.lineNetAmount).toBe('500000.00');
+    expect(line.lineAmountsNormal!.lineVatData).toBeUndefined();
+    expect(line.lineAmountsNormal!.lineGrossAmountData).toBeUndefined();
+    // The summary still derives the VAT from the rate, and it validates.
+    const summary = built.invoiceMain.invoice!.invoiceSummary;
+    expect(summary.summaryNormal?.invoiceVatAmount).toBe('135000.00');
+    expect(summary.summaryGrossData?.invoiceGrossAmount).toBe('635000.00');
+    expect(validateInvoice(built, { operation: 'CREATE' }).errors).toEqual([]);
+    // Survives the XML round trip (serializer places advanceData correctly).
+    expect(parseDocument(serializeDocument('InvoiceData', built)).value).toEqual(built);
+  });
+
+  it('builds a final invoice (végszámla) that deducts a referenced advance', () => {
+    const built = buildInvoice({
+      ...input,
+      lines: [
+        { description: 'Teljes ellenérték', quantity: 1, unitPrice: 1000000, vatPercentage: 0.27 },
+        {
+          description: 'Előleg beszámítás',
+          quantity: 1,
+          unitPrice: -500000,
+          vatPercentage: 0.27,
+          advance: { originalInvoice: 'AAA000567', paymentDate: '2026-05-02' },
+        },
+      ],
+    });
+    const deduction = built.invoiceMain.invoice!.invoiceLines!.line[1]!;
+    // Deduction line references the advance invoice and keeps full (negative) amounts.
+    expect(deduction.advanceData?.advancePaymentData?.advanceOriginalInvoice).toBe('AAA000567');
+    expect(deduction.advanceData?.advancePaymentData?.advanceExchangeRate).toBe('1');
+    expect(deduction.lineAmountsNormal!.lineNetAmountData.lineNetAmount).toBe('-500000.00');
+    expect(deduction.lineAmountsNormal!.lineVatData!.lineVatAmount).toBe('-135000.00');
+    // Net settles to 500000, and it validates as a normal CREATE.
+    expect(built.invoiceMain.invoice!.invoiceSummary.summaryNormal?.invoiceNetAmount).toBe(
+      '500000.00',
+    );
+    expect(validateInvoice(built, { operation: 'CREATE' }).errors).toEqual([]);
   });
 
   it('carries a foreign currency with its HUF twins at the exchange rate', () => {
