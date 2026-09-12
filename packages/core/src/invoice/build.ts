@@ -1,7 +1,14 @@
 import { Decimal } from '../money/decimal.js';
 import { computeInvoiceSummary } from '../money/summary.js';
 import { parseTaxNumber } from '../validation/tax-number.js';
-import type { InvoiceData, InvoiceType, LineType, UnitOfMeasureType } from '../generated/types.js';
+import type {
+  AdditionalDataType,
+  InvoiceData,
+  InvoiceDetailType,
+  InvoiceType,
+  LineType,
+  UnitOfMeasureType,
+} from '../generated/types.js';
 
 /**
  * A convenience builder for the common invoice.
@@ -20,6 +27,9 @@ import type { InvoiceData, InvoiceType, LineType, UnitOfMeasureType } from '../g
  */
 
 const MONETARY_SCALE = 2;
+// Net unit prices derived from a gross price keep extra decimals so that
+// `quantity × unitPrice` still rounds to the reported net line amount.
+const UNIT_PRICE_SCALE = 6;
 
 export interface BuildAddress {
   /** ISO 3166 alpha-2. Defaults to `HU`. */
@@ -51,6 +61,13 @@ export interface BuildLine {
   vatPercentage: number | string;
   /** Defaults to `PRODUCT`. */
   nature?: 'PRODUCT' | 'SERVICE' | 'OTHER';
+  /**
+   * Conventionally named extra data for this line (`additionalLineData`). NAV
+   * has no free-text line note; a "Tétel megjegyzés" must be a structured field
+   * whose `dataName` follows NAV's `[A-Z][0-9]{5}_...` convention. Validated by
+   * `validateInvoice`.
+   */
+  additionalData?: AdditionalDataType[];
 }
 
 export interface BuildInvoiceInput {
@@ -68,6 +85,28 @@ export interface BuildInvoiceInput {
   /** Defaults to `PAPER`. */
   appearance?: 'PAPER' | 'ELECTRONIC' | 'EDI' | 'UNKNOWN';
   paymentMethod?: 'TRANSFER' | 'CASH' | 'CARD' | 'VOUCHER' | 'OTHER';
+  /**
+   * How each line's `unitPrice` is entered. `net` (the default) takes it as the
+   * net unit price. `gross` takes it as the gross (VAT-inclusive) unit price and
+   * derives the net one from the line's VAT rate — the common "bruttó árból"
+   * data-entry mode. Because NAV is net-based, the reported gross line total may
+   * differ from `quantity × grossUnitPrice` by a rounding unit.
+   */
+  priceMode?: 'net' | 'gross';
+  /**
+   * Periodic (continuous) settlement — "folyamatos teljesítés". Sets the
+   * delivery period on the invoice and marks `periodicalSettlement`.
+   */
+  deliveryPeriod?: { start: string; end: string };
+  /** Order numbers — "rendelésszám(ok)" (`conventionalInvoiceInfo.orderNumbers`). */
+  orderNumbers?: string[];
+  /**
+   * Conventionally named extra data for the invoice (`additionalInvoiceData`).
+   * NAV has no free-text invoice note; an invoice-level "Megjegyzés" must be a
+   * structured field whose `dataName` follows NAV's `[A-Z][0-9]{5}_...`
+   * convention. Validated by `validateInvoice`.
+   */
+  additionalData?: AdditionalDataType[];
   supplier: BuildParty & { bankAccount?: string };
   customer: BuildParty & {
     /** Defaults to `DOMESTIC` when a tax number is given, else `PRIVATE_PERSON`. */
@@ -87,10 +126,17 @@ export function buildInvoice(input: BuildInvoiceInput): InvoiceData {
   const deliveryDate = input.deliveryDate ?? input.issueDate;
   const toHuf = (amount: Decimal): string => amount.multiply(rate).round(MONETARY_SCALE).toString();
 
+  const grossPriced = input.priceMode === 'gross';
+
   const line = input.lines.map((entry, index): LineType => {
     const quantity = Decimal.from(entry.quantity);
-    const unitPrice = Decimal.from(entry.unitPrice);
     const vatPercentage = Decimal.from(entry.vatPercentage);
+    // NAV's `unitPrice` is always the net unit price. In gross entry mode the
+    // caller gives the VAT-inclusive price, so divide it back out (kept at a
+    // wide scale so `quantity × unitPrice` still reconciles to the net line).
+    const unitPrice = grossPriced
+      ? Decimal.from(entry.unitPrice).divide(Decimal.from(1).add(vatPercentage), UNIT_PRICE_SCALE)
+      : Decimal.from(entry.unitPrice);
     const net = quantity.multiply(unitPrice).round(MONETARY_SCALE);
     const vat = net.multiply(vatPercentage).round(MONETARY_SCALE);
     const gross = net.add(vat);
@@ -119,6 +165,7 @@ export function buildInvoice(input: BuildInvoiceInput): InvoiceData {
           lineGrossAmountNormalHUF: toHuf(gross),
         },
       },
+      ...(entry.additionalData?.length ? { additionalLineData: entry.additionalData } : {}),
     };
   });
 
@@ -155,15 +202,7 @@ export function buildInvoice(input: BuildInvoiceInput): InvoiceData {
             customerName: input.customer.name,
             customerAddress: { detailedAddress: address(input.customer.address) },
           },
-    invoiceDetail: {
-      invoiceCategory: 'NORMAL',
-      invoiceDeliveryDate: deliveryDate,
-      currencyCode: currency,
-      exchangeRate: rate.toString(),
-      ...(input.paymentMethod ? { paymentMethod: input.paymentMethod } : {}),
-      ...(input.paymentDate ? { paymentDate: input.paymentDate } : {}),
-      invoiceAppearance: input.appearance ?? 'PAPER',
-    },
+    invoiceDetail: buildInvoiceDetail(input, currency, rate, deliveryDate),
   };
 
   // Compute the summary from the finished lines so it always reconciles.
@@ -250,6 +289,33 @@ function negateAmount(target: object, key: string): void {
   const record = target as Record<string, string | undefined>;
   const value = record[key];
   if (value !== undefined) record[key] = Decimal.from(value).negate().toString();
+}
+
+function buildInvoiceDetail(
+  input: BuildInvoiceInput,
+  currency: string,
+  rate: Decimal,
+  deliveryDate: string,
+): InvoiceDetailType {
+  const period = input.deliveryPeriod;
+  const orderNumbers = input.orderNumbers?.filter((value) => value.length > 0) ?? [];
+  return {
+    invoiceCategory: 'NORMAL',
+    invoiceDeliveryDate: deliveryDate,
+    ...(period
+      ? { invoiceDeliveryPeriodStart: period.start, invoiceDeliveryPeriodEnd: period.end }
+      : {}),
+    ...(period ? { periodicalSettlement: true } : {}),
+    currencyCode: currency,
+    exchangeRate: rate.toString(),
+    ...(input.paymentMethod ? { paymentMethod: input.paymentMethod } : {}),
+    ...(input.paymentDate ? { paymentDate: input.paymentDate } : {}),
+    invoiceAppearance: input.appearance ?? 'PAPER',
+    ...(orderNumbers.length
+      ? { conventionalInvoiceInfo: { orderNumbers: { orderNumber: orderNumbers } } }
+      : {}),
+    ...(input.additionalData?.length ? { additionalInvoiceData: input.additionalData } : {}),
+  };
 }
 
 function address(input: BuildAddress): {
