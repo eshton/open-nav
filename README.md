@@ -354,6 +354,23 @@ The end-to-end tests drive the real client against it over real HTTP, which is
 what lets signature construction be checked by an independent implementation
 rather than only against itself.
 
+## Testing against NAV's test system
+
+NAV runs a real sandbox at `api-test.onlineszamla.nav.gov.hu` — isolated test
+taxpayers, no real filings. With a test technical user configured in the
+environment, a live smoke test exercises token exchange, a taxpayer lookup, and
+a full submit-and-poll round trip; it **skips** with no credentials, so it never
+runs in CI:
+
+```sh
+NAV_LOGIN=… NAV_PASSWORD=… NAV_SIGN_KEY=… NAV_EXCHANGE_KEY=… \
+NAV_TAX_NUMBER=12345678 NAV_SOFTWARE_ID=… \
+pnpm --filter @open-nav/client exec vitest run test/live.test.ts
+```
+
+It defaults to the test environment; it never touches production unless
+`NAV_ENVIRONMENT=production` is set explicitly.
+
 ## Installing
 
 Node.js 20.10 or newer. The packages are ESM-only — a CommonJS consumer needs
