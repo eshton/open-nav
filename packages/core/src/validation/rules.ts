@@ -1,6 +1,7 @@
 import type { InvoiceData, InvoiceType, LineType, SummaryType } from '../generated/types.js';
 import { Decimal } from '../money/decimal.js';
 import { checkInvoiceSummary, hasAmountBearingLines } from '../money/summary.js';
+import { hungarianToday } from '../time.js';
 import type { NavFaultCode } from '../generated/fault-codes.js';
 import type { IssueCollector } from './issue.js';
 import { isValidCountyCode, isValidTaxpayerId } from './tax-number.js';
@@ -95,7 +96,7 @@ function checkDocument(
   collector: IssueCollector,
   context: InvoiceValidationContext,
 ): void {
-  const today = context.today ?? new Date().toISOString().slice(0, 10);
+  const today = context.today ?? hungarianToday();
   if (document.invoiceIssueDate > today) {
     collector.error(
       'INCORRECT_DATE_INVOICE_ISSUE_DATE_LATE',

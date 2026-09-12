@@ -37,10 +37,12 @@ export class Decimal {
   /**
    * Build a decimal from an exact representation.
    *
-   * Numbers are accepted for convenience but only when they are integers or
-   * survive a round trip through their shortest decimal form; anything else
-   * has already lost precision and is rejected rather than silently carried
-   * forward.
+   * A number is accepted for convenience and taken as its shortest
+   * round-trippable decimal string, so `Decimal.from(1.5)` is `1.5`; a
+   * non-finite number is rejected. But a float cannot represent every decimal
+   * exactly, and a value whose magnitude renders in exponential notation (such
+   * as `1e-7` or `1e21`) is not accepted as a number. Pass such values — and
+   * any amount where exactness matters — as a string.
    */
   static from(value: Decimal | string | number | bigint): Decimal {
     if (value instanceof Decimal) return value;
