@@ -24,6 +24,9 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Gates the whole job on a manual review: a tag starts the run, but nothing
+    # publishes until a required reviewer approves it in the GitHub Actions UI.
+    environment: release
     steps:
       - uses: actions/checkout@v7
 
