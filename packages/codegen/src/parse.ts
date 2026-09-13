@@ -144,6 +144,29 @@ interface RawSimpleType {
   ownFacets: Partial<Facets>;
 }
 
+/**
+ * Normalise the XML Schema namespace prefix to `xs:`.
+ *
+ * The parser matches literal `xs:` tags, but some NAV schemas bind the XML
+ * Schema namespace to a different prefix (eReceiptApi mixes `xs:` and `xsd:`).
+ * Rewrite any such alias — on tags and on `@type`/`@base` values alike — to
+ * `xs:`. Only prefixes actually bound to the XML Schema namespace are touched,
+ * and the (now-unused) `xmlns:` declaration is left in place, harmlessly.
+ */
+function normalizeSchemaPrefix(xml: string): string {
+  const aliases = new Set<string>();
+  for (const match of xml.matchAll(
+    /xmlns:([A-Za-z0-9_]+)="http:\/\/www\.w3\.org\/2001\/XMLSchema"/g,
+  )) {
+    if (match[1] && match[1] !== 'xs') aliases.add(match[1]);
+  }
+  let out = xml;
+  for (const prefix of aliases) {
+    out = out.replace(new RegExp(`([<\\/"'=\\s])${prefix}:`, 'g'), '$1xs:');
+  }
+  return out;
+}
+
 /** Parse every schema file into one model, resolving across namespaces. */
 export function parseSchemas(files: string[]): SchemaModel {
   const types = new Map<string, TypeDef>();
@@ -151,7 +174,9 @@ export function parseSchemas(files: string[]): SchemaModel {
   const rawSimple = new Map<string, RawSimpleType>();
 
   for (const file of files) {
-    const document = parser.parse(readFileSync(file, 'utf8')) as OrderedNode[];
+    const document = parser.parse(
+      normalizeSchemaPrefix(readFileSync(file, 'utf8')),
+    ) as OrderedNode[];
     const schema = document.find((node) => tagOf(node) === 'xs:schema');
     if (!schema) throw new CodegenError(`No xs:schema element in ${file}`);
 

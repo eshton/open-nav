@@ -37,6 +37,8 @@ const XS_PRIMITIVE_KINDS: Record<string, PrimitiveKind> = {
   'xs:long': 'integer',
   'xs:nonNegativeInteger': 'integer',
   'xs:positiveInteger': 'integer',
+  'xs:negativeInteger': 'integer',
+  'xs:nonPositiveInteger': 'integer',
   'xs:boolean': 'boolean',
   'xs:date': 'date',
   'xs:dateTime': 'dateTime',

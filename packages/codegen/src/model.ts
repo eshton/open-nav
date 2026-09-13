@@ -18,7 +18,15 @@ export type NsKey =
   // eÁFA / eVAT (EAR 2.0)
   | 'earApi'
   | 'earBase'
-  | 'earData';
+  | 'earData'
+  // eNyugta / eReceipt (ERECEIPT 1.1). The receipt schemas also reuse the OSA
+  // invoice namespaces (base/data/api) for their embedded invoice sub-schema.
+  | 'ereceiptApi'
+  | 'ereceiptBase'
+  | 'ereceiptComm'
+  | 'ereceiptDoc'
+  | 'ereceiptDocMsg'
+  | 'ereceiptReport';
 
 export const NAMESPACES: Record<NsKey, string> = {
   common: 'http://schemas.nav.gov.hu/NTCA/1.0/common',
@@ -30,6 +38,12 @@ export const NAMESPACES: Record<NsKey, string> = {
   earApi: 'http://schemas.nav.gov.hu/EAR/2.0/api',
   earBase: 'http://schemas.nav.gov.hu/EAR/2.0/base',
   earData: 'http://schemas.nav.gov.hu/EAR/2.0/data',
+  ereceiptApi: 'http://schemas.nav.gov.hu/ERECEIPT/1.1/api',
+  ereceiptBase: 'http://schemas.nav.gov.hu/ERECEIPT/1.1/base',
+  ereceiptComm: 'http://schemas.nav.gov.hu/ERECEIPT/1.1/communicationData',
+  ereceiptDoc: 'http://schemas.nav.gov.hu/ERECEIPT/1.1/documentData',
+  ereceiptDocMsg: 'http://schemas.nav.gov.hu/ERECEIPT/1.1/documentMessage',
+  ereceiptReport: 'http://schemas.nav.gov.hu/ERECEIPT/1.1/reportMessage',
 };
 
 /** How a simple type's value is carried on the wire. */
