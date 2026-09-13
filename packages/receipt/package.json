@@ -29,6 +29,8 @@
     "build": "tsc -b"
   },
   "dependencies": {
-    "node-forge": "^1.4.0"
+    "@xmldom/xmldom": "^0.9.12",
+    "node-forge": "^1.4.0",
+    "xml-crypto": "^6.1.2"
   }
 }
