@@ -83,7 +83,9 @@ async function send(
 ): Promise<EvatResponse> {
   const doFetch = options.fetch ?? globalThis.fetch;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const url = `${baseUrl.replace(/\/+$/, '')}/${operation}`;
+  let base = baseUrl;
+  while (base.endsWith('/')) base = base.slice(0, -1);
+  const url = `${base}/${operation}`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
