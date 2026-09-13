@@ -295,6 +295,85 @@
           "sha256": "0ad7a99292d9b5c967d0cf1f37ceafd9945ac456b534963c7c72a6e7bb42971c"
         }
       ]
+    },
+    {
+      "repo": "https://github.com/nav-gov-hu/eVAT",
+      "revision": "acccb181f83bec9ef8dcec3e1e12b215672c5cfd",
+      "licence": "No stated licence; vendored per NAV org-wide MIT intent - see schemas/NOTICE.md",
+      "files": [
+        {
+          "source_path": "src/schemas/hu/gov/nav/vdr/earAPI.xsd",
+          "vendored_path": "schemas/EAR/2.0/earAPI.xsd",
+          "sha256": "0b499107663d1b44a81e6ecfedf88d9fb1b46f42a7225d90f3736baf60481063"
+        },
+        {
+          "source_path": "src/schemas/hu/gov/nav/vdr/earBase.xsd",
+          "vendored_path": "schemas/EAR/2.0/earBase.xsd",
+          "sha256": "c5a15ca4fcb174d0f1e90633a3bad393d8d08bdc68121066cbc9fa7a40c66273"
+        },
+        {
+          "source_path": "src/schemas/hu/gov/nav/vdr/earData.xsd",
+          "vendored_path": "schemas/EAR/2.0/earData.xsd",
+          "sha256": "dc3de15568b94f88ac78ac69474bfda342015da9c1793f619acb8554f33f0ab5"
+        }
+      ]
+    },
+    {
+      "repo": "https://github.com/nav-gov-hu/eRECEIPT",
+      "revision": "1062e52f55c477bcdd5c5ee4a512ccafa1ad63d9",
+      "licence": "No stated licence; vendored per NAV org-wide MIT intent - see schemas/NOTICE.md",
+      "files": [
+        {
+          "source_path": "xsd/1.1/eReceipt/1.1/eReceiptApi.xsd",
+          "vendored_path": "schemas/ERECEIPT/1.1/eReceiptApi.xsd",
+          "sha256": "a6a19110650962a12415eeeaaf9cc47eba886a4d3de0d7363f6df0eabae6ee85"
+        },
+        {
+          "source_path": "xsd/1.1/eReceipt/1.1/eReceiptBase.xsd",
+          "vendored_path": "schemas/ERECEIPT/1.1/eReceiptBase.xsd",
+          "sha256": "2e5e7115445d12b20152c15f1e8088043e9e0d83c0519aaf920c14469d2406bd"
+        },
+        {
+          "source_path": "xsd/1.1/eReceipt/1.1/communicationData.xsd",
+          "vendored_path": "schemas/ERECEIPT/1.1/communicationData.xsd",
+          "sha256": "67a7dd7ef02125c4534e173ca5a4bcae8c555e0bf4029dc3b98652493e250d56"
+        },
+        {
+          "source_path": "xsd/1.1/eReceipt/1.1/documentData.xsd",
+          "vendored_path": "schemas/ERECEIPT/1.1/documentData.xsd",
+          "sha256": "3cded80381ad5ba7cec2d65720d2ccef32df08299a14f2c76dd1cfbe69c54c1e"
+        },
+        {
+          "source_path": "xsd/1.1/eReceipt/1.1/documentMessage.xsd",
+          "vendored_path": "schemas/ERECEIPT/1.1/documentMessage.xsd",
+          "sha256": "fe6a385bc59ba8ba193273a6685c6735823ceabda411dfede220f61d7ba55546"
+        },
+        {
+          "source_path": "xsd/1.1/eReceipt/1.1/reportMessage.xsd",
+          "vendored_path": "schemas/ERECEIPT/1.1/reportMessage.xsd",
+          "sha256": "854f496b7d1e449853e9ba21e9dde7370d2c0290fbcf2e9a54b336add0d50142"
+        },
+        {
+          "source_path": "xsd/1.1/eReceipt/1.0/common.xsd",
+          "vendored_path": "schemas/ERECEIPT/1.0/common.xsd",
+          "sha256": "0ad7a99292d9b5c967d0cf1f37ceafd9945ac456b534963c7c72a6e7bb42971c"
+        },
+        {
+          "source_path": "xsd/1.1/eReceipt/1.0/invoiceApi.xsd",
+          "vendored_path": "schemas/ERECEIPT/1.0/invoiceApi.xsd",
+          "sha256": "182b8cb0993d4920d0a8f352662f007c34e1345f0c149fe2ad09f1b8ec5a596a"
+        },
+        {
+          "source_path": "xsd/1.1/eReceipt/1.0/invoiceBase.xsd",
+          "vendored_path": "schemas/ERECEIPT/1.0/invoiceBase.xsd",
+          "sha256": "6509868f6a0781c1a6e9cebb92ebb36362997e74c7faf961870f1c6669c08842"
+        },
+        {
+          "source_path": "xsd/1.1/eReceipt/1.0/invoiceData.xsd",
+          "vendored_path": "schemas/ERECEIPT/1.0/invoiceData.xsd",
+          "sha256": "f879df81a426bac2c880040914c1adfcfa51f5bfc0af4274106eebc16fbd33f8"
+        }
+      ]
     }
   ]
 }

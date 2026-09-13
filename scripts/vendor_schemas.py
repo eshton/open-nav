@@ -8,9 +8,15 @@ never edited by hand: run this script to refresh them, then review the diff.
     python3 scripts/vendor_schemas.py --check   # fail if vendored copy is stale
     python3 scripts/vendor_schemas.py           # refresh in place
 
-Sources (both MIT licensed, (c) Nemzeti Adó- és Vámhivatal):
-  * https://github.com/nav-gov-hu/Online-Invoice  (OSA 3.0 schemas + samples)
-  * https://github.com/nav-gov-hu/Common          (NTCA 1.0 common.xsd)
+Sources:
+  * https://github.com/nav-gov-hu/Online-Invoice  (OSA 3.0 schemas + samples)  — MIT (c) NAV
+  * https://github.com/nav-gov-hu/Common          (NTCA 1.0 common.xsd)        — MIT (c) NAV
+  * https://github.com/nav-gov-hu/eVAT            (EAR 2.0 eÁFA M2M schemas)    — no stated licence
+  * https://github.com/nav-gov-hu/eRECEIPT        (ERECEIPT 1.1 eNyugta M2M)    — no stated licence
+
+The eVAT and eRECEIPT repositories carry no licence file. They are vendored
+under NAV's evident org-wide MIT intent — see schemas/NOTICE.md — not under an
+explicit grant. If NAV declines to license them, drop those two sources.
 """
 
 from __future__ import annotations
@@ -57,6 +63,41 @@ FIXTURE_SETS = [
     ('data_samples', 'sample/Data sample', 'conformance/data-samples'),
 ]
 
+# eÁFA (eVAT) and eNyugta (eReceipt) M2M schemas. Neither repository carries a
+# licence file, unlike Online-Invoice and Common; see schemas/NOTICE.md.
+EVAT_REPO = 'https://github.com/nav-gov-hu/eVAT'
+ERECEIPT_REPO = 'https://github.com/nav-gov-hu/eRECEIPT'
+UNLICENSED_NOTICE = 'No stated licence; vendored per NAV org-wide MIT intent - see schemas/NOTICE.md'
+
+# (source_path, vendored_path) pairs, copied verbatim. The layout is preserved
+# where the schemas use relative imports so those imports still resolve.
+#
+# eVAT: earAPI/earBase/earData form the M2M closure; they import NTCA common by
+# namespace only (catalog-resolved, no schemaLocation), so no co-located copy is
+# needed. formData is the legacy ÁNYK form schema (EAR/1.0/base) and is skipped.
+EVAT_FILES = [
+    ('src/schemas/hu/gov/nav/vdr/earAPI.xsd', 'schemas/EAR/2.0/earAPI.xsd'),
+    ('src/schemas/hu/gov/nav/vdr/earBase.xsd', 'schemas/EAR/2.0/earBase.xsd'),
+    ('src/schemas/hu/gov/nav/vdr/earData.xsd', 'schemas/EAR/2.0/earData.xsd'),
+]
+# eReceipt: the 1.1 API set plus the 1.0 sub-schemas it imports via ../1.0/.
+# Vendoring 1.1 -> ERECEIPT/1.1 and 1.0 -> ERECEIPT/1.0 keeps those relative
+# references valid. receipt_datareport, eDocumentStore, eCustomerApp and
+# NaviNotification are separate interfaces, not needed for the manage/query
+# receipt client, and are left for a later pass.
+ERECEIPT_FILES = [
+    ('xsd/1.1/eReceipt/1.1/eReceiptApi.xsd', 'schemas/ERECEIPT/1.1/eReceiptApi.xsd'),
+    ('xsd/1.1/eReceipt/1.1/eReceiptBase.xsd', 'schemas/ERECEIPT/1.1/eReceiptBase.xsd'),
+    ('xsd/1.1/eReceipt/1.1/communicationData.xsd', 'schemas/ERECEIPT/1.1/communicationData.xsd'),
+    ('xsd/1.1/eReceipt/1.1/documentData.xsd', 'schemas/ERECEIPT/1.1/documentData.xsd'),
+    ('xsd/1.1/eReceipt/1.1/documentMessage.xsd', 'schemas/ERECEIPT/1.1/documentMessage.xsd'),
+    ('xsd/1.1/eReceipt/1.1/reportMessage.xsd', 'schemas/ERECEIPT/1.1/reportMessage.xsd'),
+    ('xsd/1.1/eReceipt/1.0/common.xsd', 'schemas/ERECEIPT/1.0/common.xsd'),
+    ('xsd/1.1/eReceipt/1.0/invoiceApi.xsd', 'schemas/ERECEIPT/1.0/invoiceApi.xsd'),
+    ('xsd/1.1/eReceipt/1.0/invoiceBase.xsd', 'schemas/ERECEIPT/1.0/invoiceBase.xsd'),
+    ('xsd/1.1/eReceipt/1.0/invoiceData.xsd', 'schemas/ERECEIPT/1.0/invoiceData.xsd'),
+]
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -92,9 +133,14 @@ def clone(repo: str, dest: str) -> None:
 def vendor(dest_root: str) -> tuple[dict, dict]:
     with tempfile.TemporaryDirectory() as tmp:
         osa, common = os.path.join(tmp, 'osa'), os.path.join(tmp, 'common')
+        evat, ereceipt = os.path.join(tmp, 'evat'), os.path.join(tmp, 'ereceipt')
         clone(OSA_REPO, osa)
         clone(COMMON_REPO, common)
+        clone(EVAT_REPO, evat)
+        clone(ERECEIPT_REPO, ereceipt)
         osa_revision = run('git', '-C', osa, 'rev-parse', 'HEAD').strip()
+        evat_revision = run('git', '-C', evat, 'rev-parse', 'HEAD').strip()
+        ereceipt_revision = run('git', '-C', ereceipt, 'rev-parse', 'HEAD').strip()
         subprocess.run(
             ['git', '-C', common, 'fetch', '--depth', '1', 'origin',
              f'refs/tags/{COMMON_REVISION}:refs/tags/{COMMON_REVISION}'],
@@ -103,6 +149,8 @@ def vendor(dest_root: str) -> tuple[dict, dict]:
 
         osa_files: list[dict] = []
         common_files: list[dict] = []
+        evat_files: list[dict] = []
+        ereceipt_files: list[dict] = []
         manifest = {
             'generated_by': 'scripts/vendor_schemas.py',
             'note': 'Vendored verbatim from the official NAV repositories. Do not edit by hand.',
@@ -111,6 +159,10 @@ def vendor(dest_root: str) -> tuple[dict, dict]:
                  'licence': 'MIT (c) Nemzeti Ado- es Vamhivatal', 'files': osa_files},
                 {'repo': COMMON_REPO, 'revision': COMMON_REVISION,
                  'licence': 'MIT (c) Nemzeti Ado- es Vamhivatal', 'files': common_files},
+                {'repo': EVAT_REPO, 'revision': evat_revision,
+                 'licence': UNLICENSED_NOTICE, 'files': evat_files},
+                {'repo': ERECEIPT_REPO, 'revision': ereceipt_revision,
+                 'licence': UNLICENSED_NOTICE, 'files': ereceipt_files},
             ],
         }
         fixtures: dict[str, list[dict]] = {label: [] for label, _, _ in FIXTURE_SETS}
@@ -128,6 +180,11 @@ def vendor(dest_root: str) -> tuple[dict, dict]:
         for name in I18N_FILES:
             rel = f'src/i18n/{name}'
             place(os.path.join(osa, rel), f'schemas/i18n/{name}', rel, osa_files)
+
+        for src_rel, dest_rel in EVAT_FILES:
+            place(os.path.join(evat, src_rel), dest_rel, src_rel, evat_files)
+        for src_rel, dest_rel in ERECEIPT_FILES:
+            place(os.path.join(ereceipt, src_rel), dest_rel, src_rel, ereceipt_files)
 
         for label, sub, out in FIXTURE_SETS:
             for name in sorted(os.listdir(os.path.join(osa, sub))):
@@ -182,7 +239,13 @@ def main() -> int:
         stale = []
         for sub in ('schemas', 'conformance'):
             result = subprocess.run(
-                ['diff', '-r', '-q', os.path.join(ROOT, sub), os.path.join(staging, sub)],
+                # README.md, known-issues.md and NOTICE.md are hand-authored
+                # (not produced into the staging tree), so exclude them from the
+                # drift comparison rather than have them always read as stale.
+                # NAV-LICENCE.md is vendored and is intentionally not excluded.
+                ['diff', '-r', '-q',
+                 '-x', 'README.md', '-x', 'known-issues.md', '-x', 'NOTICE.md',
+                 os.path.join(ROOT, sub), os.path.join(staging, sub)],
                 capture_output=True, text=True,
             )
             if result.returncode != 0:
