@@ -36,6 +36,11 @@ export interface EncryptedDocument {
   keyBase64: string;
 }
 
+/** Generate a fresh 32-byte AES-256 key, base64 — the request `decryptKey`. */
+export function generateAesKey(): string {
+  return randomBytes(32).toString('base64');
+}
+
 /**
  * Encrypt a document body with a fresh AES-256-CBC key.
  *
@@ -44,10 +49,20 @@ export interface EncryptedDocument {
  * for the request's `decryptKey` field.
  */
 export function encryptDocument(compressed: Uint8Array): EncryptedDocument {
-  const key = randomBytes(32);
-  const cipher = createCipheriv(AES_ALGORITHM, key, AES_IV); // PKCS#7 padding is on by default
-  const ciphertext = Buffer.concat([cipher.update(compressed), cipher.final()]);
-  return { ciphertext: new Uint8Array(ciphertext), keyBase64: key.toString('base64') };
+  const keyBase64 = generateAesKey();
+  return { ciphertext: encryptWithKey(compressed, keyBase64), keyBase64 };
+}
+
+/**
+ * Encrypt a document body with a given AES-256-CBC key (base64).
+ *
+ * A single request carries one `decryptKey`, so the document and customer
+ * payloads of one envelope are encrypted with the same key — this is the
+ * primitive the envelope builder uses for both.
+ */
+export function encryptWithKey(data: Uint8Array, keyBase64: string): Uint8Array {
+  const cipher = createCipheriv(AES_ALGORITHM, Buffer.from(keyBase64, 'base64'), AES_IV); // PKCS#7 on by default
+  return new Uint8Array(Buffer.concat([cipher.update(data), cipher.final()]));
 }
 
 /** Decrypt an AES-256-CBC document body given its base64 key. */
