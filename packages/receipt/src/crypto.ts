@@ -123,6 +123,8 @@ export function generateEncryptionKeyPair(): KeyPairPem {
 export interface CsrResult {
   /** The PKCS#10 certificate signing request, PEM. */
   csrPem: string;
+  /** The CSR as base64-encoded DER — the whitespace-free form sent in the XML. */
+  csrDerBase64: string;
   /** The RSA private key, PKCS#8 PEM — store this securely. */
   privateKeyPem: string;
   /** The RSA public key, SPKI PEM. */
@@ -146,8 +148,10 @@ export function generateCsr(commonName: string, modulusLength = 2048): CsrResult
   csr.publicKey = keys.publicKey;
   csr.setSubject([{ shortName: 'CN', value: commonName }]);
   csr.sign(keys.privateKey, forge.md.sha256.create());
+  const der = forge.asn1.toDer(forge.pki.certificationRequestToAsn1(csr)).getBytes();
   return {
     csrPem: forge.pki.certificationRequestToPem(csr),
+    csrDerBase64: forge.util.encode64(der),
     privateKeyPem: forge.pki.privateKeyToPem(keys.privateKey),
     publicKeyPem: forge.pki.publicKeyToPem(keys.publicKey),
   };
