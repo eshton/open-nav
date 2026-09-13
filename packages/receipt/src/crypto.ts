@@ -9,6 +9,7 @@ import {
   randomBytes,
   X509Certificate,
 } from 'node:crypto';
+import forge from 'node-forge';
 
 /**
  * eNyugta receipt cryptography (Node stdlib only).
@@ -116,6 +117,40 @@ export function generateEncryptionKeyPair(): KeyPairPem {
     publicKeyEncoding: { type: 'spki', format: 'pem' },
     privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
   });
+}
+
+/** A PKCS#10 CSR and the key pair it was generated for. */
+export interface CsrResult {
+  /** The PKCS#10 certificate signing request, PEM. */
+  csrPem: string;
+  /** The RSA private key, PKCS#8 PEM — store this securely. */
+  privateKeyPem: string;
+  /** The RSA public key, SPKI PEM. */
+  publicKeyPem: string;
+}
+
+/**
+ * Generate an RSA key pair and a PKCS#10 CSR for a NAV-issued certificate.
+ *
+ * During device registration the e-cash register submits a CSR for each of the
+ * authentication and signing certificates; NAV inserts the business data, so
+ * the CSR only needs the common name (the AP number). Returns the CSR and the
+ * key pair; the private key must be stored securely (a hardware register keeps
+ * it in a hardware key store).
+ *
+ * @param commonName the certificate common name, e.g. the AP number `AP12345678`.
+ */
+export function generateCsr(commonName: string, modulusLength = 2048): CsrResult {
+  const keys = forge.pki.rsa.generateKeyPair(modulusLength);
+  const csr = forge.pki.createCertificationRequest();
+  csr.publicKey = keys.publicKey;
+  csr.setSubject([{ shortName: 'CN', value: commonName }]);
+  csr.sign(keys.privateKey, forge.md.sha256.create());
+  return {
+    csrPem: forge.pki.certificationRequestToPem(csr),
+    privateKeyPem: forge.pki.privateKeyToPem(keys.privateKey),
+    publicKeyPem: forge.pki.publicKeyToPem(keys.publicKey),
+  };
 }
 
 /** Summary of an X.509 certificate NAV issued. */
