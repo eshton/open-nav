@@ -154,6 +154,9 @@ importers:
 
   packages/receipt:
     dependencies:
+      '@open-nav/core':
+        specifier: workspace:^
+        version: link:../core
       '@xmldom/xmldom':
         specifier: ^0.9.12
         version: 0.9.12
