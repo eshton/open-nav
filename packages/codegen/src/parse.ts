@@ -400,17 +400,38 @@ function readChoice(node: OrderedNode, ns: NsKey, scope: PrefixScope, def: Compl
   const members: string[] = [];
   let anyOptionalMember = false;
 
+  // A member appears optional to the type, since only one branch is chosen. A
+  // field can also show up in more than one branch (e.g. a sequence branch and
+  // an element branch naming the same element), so emit each field only once.
+  const addMember = (child: OrderedNode): boolean => {
+    const field = readField(child, ns, scope);
+    if (!def.fields.some((existing) => existing.name === field.name && existing.ns === field.ns)) {
+      def.fields.push({ ...field, minOccurs: 0 });
+    }
+    if (!members.includes(field.name)) members.push(field.name);
+    return field.minOccurs === 0;
+  };
+
   for (const child of childrenOf(node)) {
     const tag = tagOf(child);
     if (tag === 'xs:annotation' || tag === '#text') continue;
-    if (tag !== 'xs:element') {
+    if (tag === 'xs:element') {
+      if (addMember(child)) anyOptionalMember = true;
+    } else if (tag === 'xs:sequence') {
+      // A sequence branch groups several elements as one alternative. The
+      // all-or-nothing grouping is not modelled; each element becomes an
+      // optional field, and the branch relaxes the "exactly one member" rule.
+      for (const inner of childrenOf(child)) {
+        const innerTag = tagOf(inner);
+        if (innerTag === 'xs:element') addMember(inner);
+        else if (innerTag !== 'xs:annotation' && innerTag !== '#text') {
+          throw new CodegenError(`${def.name}: unsupported sequence-in-choice content ${innerTag}`);
+        }
+      }
+      anyOptionalMember = true;
+    } else {
       throw new CodegenError(`${def.name}: unsupported choice content ${tag}`);
     }
-    const field = readField(child, ns, scope);
-    if (field.minOccurs === 0) anyOptionalMember = true;
-    // Only one member may appear, so no member can be structurally required.
-    def.fields.push({ ...field, minOccurs: 0 });
-    members.push(field.name);
   }
 
   const choiceOptional = attrsOf(node)['@minOccurs'] === '0';
@@ -420,8 +441,15 @@ function readChoice(node: OrderedNode, ns: NsKey, scope: PrefixScope, def: Compl
 function readField(node: OrderedNode, ns: NsKey, scope: PrefixScope): FieldDef {
   const attrs = attrsOf(node);
   const name = attrs['@name'];
-  const type = attrs['@type'];
+  let type = attrs['@type'];
   if (!name) throw new CodegenError('Element without a name');
+  if (!type) {
+    // An element may carry an inline `xs:simpleType` restriction instead of a
+    // named @type (e.g. earData's totalRowCount). Non-enum simple types are
+    // emitted as transparent primitive aliases anyway, so resolve the field to
+    // the restriction's base primitive.
+    type = inlineSimpleTypeBase(node);
+  }
   if (!type) {
     throw new CodegenError(
       `Element ${name} has no type (inline nested types are only supported at the document root)`,
@@ -436,6 +464,14 @@ function readField(node: OrderedNode, ns: NsKey, scope: PrefixScope): FieldDef {
     maxOccurs: maxRaw === undefined ? 1 : maxRaw === 'unbounded' ? null : Number(maxRaw),
     doc: docOf(node),
   };
+}
+
+/** The base of an element's inline `xs:simpleType` restriction, if any. */
+function inlineSimpleTypeBase(node: OrderedNode): string | undefined {
+  const simple = childrenOf(node).find((child) => tagOf(child) === 'xs:simpleType');
+  if (!simple) return undefined;
+  const restriction = childrenOf(simple).find((child) => tagOf(child) === 'xs:restriction');
+  return restriction ? attrsOf(restriction)['@base'] : undefined;
 }
 
 /**
