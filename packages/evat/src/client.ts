@@ -21,12 +21,34 @@ import type {
   ManageDeclarationUploadResponse,
   PurgeAttachmentResponse,
   QueryAttachmentListResponse,
+  QueryCustomsDeclarationDigestRequest,
+  QueryCustomsDeclarationDigestResponse,
+  QueryCustomsDeclarationTaxCodeRequest,
+  QueryCustomsDeclarationTaxCodeResponse,
+  QueryDeclarationDataResponse,
+  QueryDeclarationListResponse,
   QueryDeclarationProcessingStatusResponse,
+  QueryDocumentListResponse,
+  QueryDocumentListResultResponse,
+  QueryInvoiceTaxCodeRequest,
+  QueryInvoiceTaxCodeResponse,
+  QueryTaxCodeCatalogResponse,
+  QueryVatDeclarationDataResponse,
   UserHeaderType,
 } from './generated/types.js';
 import { assertEvatCredentials, type EvatCredentials } from './credentials.js';
 import { serializeDocument } from './codec.js';
-import { postMultipart, postXml, type EvatTransportOptions, type UploadPart } from './transport.js';
+import {
+  postMultipart,
+  postXml,
+  postXmlForMultipart,
+  type EvatDownload,
+  type EvatTransportOptions,
+  type UploadPart,
+} from './transport.js';
+
+/** A request body with the parts the client fills in removed. */
+export type EvatRequestBody<T> = Omit<T, 'header' | 'user' | 'software'>;
 
 /** Test and production base URLs for the eVAT M2M interface. */
 export const EVAT_BASE_URLS: Record<NavEnvironment, string> = {
@@ -209,6 +231,91 @@ export class EvatClient {
   /** List the attachments in the taxpayer's repository. */
   queryAttachmentList(): Promise<QueryAttachmentListResponse> {
     return this.execute('queryAttachmentList', 'QueryAttachmentListRequest', {});
+  }
+
+  // ---- read-only queries ("see my returns") -----------------------------
+
+  /** List the taxpayer's declarations filed in a fulfilment-date window. */
+  queryDeclarationList(range: {
+    taxpointDateFrom: string;
+    taxpointDateTo: string;
+  }): Promise<QueryDeclarationListResponse> {
+    return this.execute('queryDeclarationList', 'QueryDeclarationListRequest', range);
+  }
+
+  /** NAV's compiled VAT-return (BEVFELD) data for a processed declaration. */
+  queryVatDeclarationData(
+    declarationProcessingId: string,
+  ): Promise<QueryVatDeclarationDataResponse> {
+    return this.execute('queryVatDeclarationData', 'QueryVatDeclarationDataRequest', {
+      declarationProcessingId,
+      declarationSchema: VAT_DECLARATION,
+    });
+  }
+
+  /**
+   * Download a declaration's data. The response is multipart: the parsed XML
+   * (`value`) plus the analytics payload bytes (`payload`, the octet-stream
+   * part — typically gzipped).
+   */
+  queryDeclarationData(declarationProcessingId: string): Promise<EvatDownload> {
+    const requestId = createRequestId(this.requestIdPrefix);
+    const timestamp = toHeaderTimestamp(this.now());
+    const signature = requestSignature(requestId, timestamp, this.credentials.signKey);
+    const request = {
+      ...this.envelope(requestId, timestamp, signature),
+      declarationProcessingId,
+      declarationSchema: VAT_DECLARATION,
+    };
+    const xml = serializeDocument('QueryDeclarationDataRequest', request);
+    return postXmlForMultipart(this.baseUrl, 'queryDeclarationData', xml, this.transport);
+  }
+
+  /** List documents (declarations and their events) in a date window. */
+  queryDocumentList(range: {
+    taxpointDateFrom: string;
+    taxpointDateTo: string;
+  }): Promise<QueryDocumentListResponse> {
+    return this.execute('queryDocumentList', 'QueryDocumentListRequest', range);
+  }
+
+  /** Fetch the result of a document-list query by its query id. */
+  queryDocumentListResult(queryId: string): Promise<QueryDocumentListResultResponse> {
+    return this.execute('queryDocumentListResult', 'QueryDocumentListResultRequest', { queryId });
+  }
+
+  /** The tax-code catalogue valid on a given date. */
+  queryTaxCodeCatalog(taxpointDate: string): Promise<QueryTaxCodeCatalogResponse> {
+    return this.execute('queryTaxCodeCatalog', 'QueryTaxCodeCatalogRequest', { taxpointDate });
+  }
+
+  /** Tax-code lookup for a specific invoice. */
+  queryInvoiceTaxCode(
+    body: EvatRequestBody<QueryInvoiceTaxCodeRequest>,
+  ): Promise<QueryInvoiceTaxCodeResponse> {
+    return this.execute('queryInvoiceTaxCode', 'QueryInvoiceTaxCodeRequest', body);
+  }
+
+  /** Tax-code lookup for a customs declaration. */
+  queryCustomsDeclarationTaxCode(
+    body: EvatRequestBody<QueryCustomsDeclarationTaxCodeRequest>,
+  ): Promise<QueryCustomsDeclarationTaxCodeResponse> {
+    return this.execute(
+      'queryCustomsDeclarationTaxCode',
+      'QueryCustomsDeclarationTaxCodeRequest',
+      body,
+    );
+  }
+
+  /** Paged digest of customs declarations matching a query. */
+  queryCustomsDeclarationDigest(
+    body: EvatRequestBody<QueryCustomsDeclarationDigestRequest>,
+  ): Promise<QueryCustomsDeclarationDigestResponse> {
+    return this.execute(
+      'queryCustomsDeclarationDigest',
+      'QueryCustomsDeclarationDigestRequest',
+      body,
+    );
   }
 
   /**
