@@ -79,6 +79,12 @@ EVAT_FILES = [
     ('src/schemas/hu/gov/nav/vdr/earAPI.xsd', 'schemas/EAR/2.0/earAPI.xsd'),
     ('src/schemas/hu/gov/nav/vdr/earBase.xsd', 'schemas/EAR/2.0/earBase.xsd'),
     ('src/schemas/hu/gov/nav/vdr/earData.xsd', 'schemas/EAR/2.0/earData.xsd'),
+    # The standard tax-code catalogue (VAT ledger classification codes),
+    # generated into typed data by scripts/generate_tax_codes.py.
+    (
+        'docs/standard_adokod/TAX_CODE_CATALOG_20260904_extended.xlsx',
+        'schemas/EAR/tax-code-catalog/TAX_CODE_CATALOG_20260904_extended.xlsx',
+    ),
 ]
 # eReceipt: the 1.1 API set plus the 1.0 sub-schemas it imports via ../1.0/.
 # Vendoring 1.1 -> ERECEIPT/1.1 and 1.0 -> ERECEIPT/1.0 keeps those relative

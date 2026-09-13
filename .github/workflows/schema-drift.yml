@@ -24,3 +24,9 @@ jobs:
 
       - name: Compare vendored NAV files against upstream
         run: python3 scripts/vendor_schemas.py --check
+
+      - name: Install openpyxl for the tax-code catalogue check
+        run: python3 -m pip install --quiet openpyxl
+
+      - name: Check the generated tax-code catalogue is in sync
+        run: python3 scripts/generate_tax_codes.py --check
