@@ -1,19 +1,26 @@
-name: Schema drift
+name: NAV upstream monitor
 
-# The vendored NAV schemas, samples and validation catalogues are a snapshot.
-# NAV revises them without warning, so check weekly that our copy still
-# matches upstream: a surprising diff is better found here than in production.
+# NAV revises the schemas, catalogues and interface versions without warning.
+# This watches for that daily on two levels:
+#   * drift — the specific files we vendored no longer match upstream
+#     (vendor_schemas.py --check, generate_tax_codes.py --check);
+#   * upstream movement — a tracked NAV repo has new commits/releases/tags,
+#     even ones not yet in the files we copy (check_upstream.py).
+# On any change it opens (or updates) a tracking issue so it is actioned fast —
+# the goal is to regenerate and cut a release within a day of a NAV change — and
+# still fails the run so the change is visible on the Actions tab too.
 
 on:
   schedule:
-    - cron: '17 6 * * 1'
+    - cron: '17 6 * * *' # daily
   workflow_dispatch:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
-  check:
+  monitor:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -22,11 +29,58 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Compare vendored NAV files against upstream
-        run: python3 scripts/vendor_schemas.py --check
-
       - name: Install openpyxl for the tax-code catalogue check
         run: python3 -m pip install --quiet openpyxl
 
-      - name: Check the generated tax-code catalogue is in sync
-        run: python3 scripts/generate_tax_codes.py --check
+      - name: Check vendored NAV files against upstream
+        id: drift
+        run: |
+          if python3 scripts/vendor_schemas.py --check > drift.txt 2>&1 \
+            && python3 scripts/generate_tax_codes.py --check >> drift.txt 2>&1; then
+            echo 'drifted=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'drifted=true' >> "$GITHUB_OUTPUT"
+          fi
+          {
+            echo '## Vendored file drift'
+            echo
+            echo '```'
+            cat drift.txt
+            echo '```'
+            echo
+          } >> report.md
+
+      - name: Check upstream NAV repositories for new commits/releases
+        id: upstream
+        run: |
+          {
+            if python3 scripts/check_upstream.py --format md; then
+              echo 'changed=false' >> "$GITHUB_OUTPUT"
+            else
+              echo 'changed=true' >> "$GITHUB_OUTPUT"
+            fi
+          } >> report.md
+
+      - name: Open or update the tracking issue
+        if: steps.drift.outputs.drifted == 'true' || steps.upstream.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="NAV upstream change detected"
+          body="$(cat report.md)
+          <sub>Filed by the NAV upstream monitor — [run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).</sub>"
+          existing="$(gh issue list --label nav-upstream-change --state open \
+            --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh label create nav-upstream-change --color FBCA04 \
+              --description 'A NAV schema/interface change to vendor' 2>/dev/null || true
+            gh issue create --title "$title" --label nav-upstream-change --body "$body"
+          fi
+
+      - name: Fail the run if anything changed
+        if: steps.drift.outputs.drifted == 'true' || steps.upstream.outputs.changed == 'true'
+        run: |
+          echo 'A NAV upstream change was detected — see the tracking issue.' >&2
+          exit 1
