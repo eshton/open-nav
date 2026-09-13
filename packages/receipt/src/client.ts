@@ -11,7 +11,9 @@ import type {
   CashRegisterInfoType,
   DocumentClassType,
   DocumentResponse,
+  GetProductByCodeResponse,
   HelloResponse,
+  QueryTaxpayerResponse,
   ReportClassType,
   ReportResponse,
 } from './generated/types.js';
@@ -30,13 +32,16 @@ export const RECEIPT_DATA_BASE_URLS = {
   production: 'https://lekerdezo.enyugta.nav.gov.hu',
 } as const;
 
-type OperationKey = 'hello' | 'cashRegisterInfo' | 'document' | 'report';
+type OperationKey =
+  'hello' | 'cashRegisterInfo' | 'document' | 'report' | 'queryTaxpayer' | 'getProductByCode';
 
 const DEFAULT_PATHS: Record<OperationKey, string> = {
   hello: 'hello',
   cashRegisterInfo: 'cashRegisterInfo',
   document: 'document',
   report: 'report',
+  queryTaxpayer: 'queryTaxpayer',
+  getProductByCode: 'getProductByCode',
 };
 
 export interface ReceiptClientOptions {
@@ -221,6 +226,26 @@ export class ReceiptClient {
         : {}),
     };
     return this.send('report', 'ReportRequest', request) as Promise<ReportResponse>;
+  }
+
+  /** Look up a taxpayer's validity and data by tax number. */
+  async queryTaxpayer(taxNumber: string): Promise<QueryTaxpayerResponse> {
+    const request = { ...this.header(), APNumber: this.apNumber, taxNumber };
+    return this.send(
+      'queryTaxpayer',
+      'QueryTaxpayerRequest',
+      request,
+    ) as Promise<QueryTaxpayerResponse>;
+  }
+
+  /** Look up product data (e.g. VAT rate) by product code. */
+  async getProductByCode(productCode: string): Promise<GetProductByCodeResponse> {
+    const request = { ...this.header(), APNumber: this.apNumber, productCode };
+    return this.send(
+      'getProductByCode',
+      'GetProductByCodeRequest',
+      request,
+    ) as Promise<GetProductByCodeResponse>;
   }
 
   private async send(op: OperationKey, root: string, request: object): Promise<unknown> {

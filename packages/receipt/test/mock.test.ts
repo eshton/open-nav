@@ -82,8 +82,23 @@ describe('createReceiptMock', () => {
     });
     expect(report.result.funcCode).toBe('OK');
 
+    const taxpayer = await client.queryTaxpayer('12345678');
+    expect(taxpayer.taxpayerValidity).toBe(true);
+
+    const product = await client.getProductByCode('01012100');
+    expect(product.result.funcCode).toBe('OK');
+    expect(product.numberOfProducts).toBe(0);
+
     const ops = mock.state.requests.map((r) => r.operation);
-    expect(ops).toEqual(['register', 'cert', 'hello', 'document', 'report']);
+    expect(ops).toEqual([
+      'register',
+      'cert',
+      'hello',
+      'document',
+      'report',
+      'queryTaxpayer',
+      'getProductByCode',
+    ]);
   });
 
   it('rejects a submission whose envelope is missing', async () => {
