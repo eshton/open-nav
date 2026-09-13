@@ -102,6 +102,12 @@ importers:
         specifier: ^5.7.0
         version: 5.11.1
 
+  packages/evat:
+    dependencies:
+      '@open-nav/core':
+        specifier: workspace:^
+        version: link:../core
+
   packages/invoicing:
     dependencies:
       '@open-nav/core':
@@ -142,6 +148,8 @@ importers:
       '@open-nav/client':
         specifier: workspace:^
         version: link:../client
+
+  packages/receipt: {}
 
 packages:
 
