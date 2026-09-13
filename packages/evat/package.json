@@ -27,5 +27,8 @@
   },
   "scripts": {
     "build": "tsc -b"
+  },
+  "dependencies": {
+    "@open-nav/core": "workspace:^"
   }
 }

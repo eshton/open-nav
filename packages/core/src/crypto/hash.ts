@@ -19,6 +19,16 @@ export function sha3_512(value: string): string {
 }
 
 /**
+ * Uppercase hexadecimal SHA3-512 digest of raw bytes.
+ *
+ * Used for the eVAT/eNyugta content hash and the file-upload request
+ * signature, where the digest is taken over a binary payload rather than text.
+ */
+export function sha3_512Bytes(data: Uint8Array): string {
+  return toHexUpper(getCryptoProvider().sha3_512(data));
+}
+
+/**
  * Hash of the technical user's password for the `user/passwordHash` field.
  *
  * NAV expects the uppercase hex SHA-512 digest of the password, declared on
