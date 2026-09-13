@@ -90,10 +90,7 @@ export interface DocumentSubmission extends SubmissionHeader {
   signingKeyPem: string;
 }
 
-export interface ReportSubmission extends Omit<
-  SubmissionHeader,
-  'qRCodeExpired' | 'ntcaVerificationCode'
-> {
+export interface ReportSubmission extends SubmissionHeader {
   reportClass: ReportClassType;
   /** Serialized `CoreReport` XML. */
   coreReportXml: string;
@@ -213,10 +210,12 @@ export class ReceiptClient {
       decryptKey,
       searchKeyTimestamp: submission.searchKeyTimestamp,
       searchKey: submission.searchKey,
+      qRCodeExpired: submission.qRCodeExpired,
       offlineCreated: submission.offlineCreated,
       cashRegisterSignCertificate: submission.cashRegisterSignCertificate,
       recordCounter: submission.recordCounter,
       lastRecordCounter: submission.lastRecordCounter,
+      ntcaVerificationCode: submission.ntcaVerificationCode,
       ...(submission.sendMissingDocumentProcessId
         ? { sendMissingDocumentProcessId: submission.sendMissingDocumentProcessId }
         : {}),

@@ -6,3 +6,4 @@ export * from './envelope.js';
 export * from './transport.js';
 export * from './registration.js';
 export * from './client.js';
+export * from './mock.js';
