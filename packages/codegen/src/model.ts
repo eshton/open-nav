@@ -7,7 +7,18 @@
  */
 
 /** Short key for each namespace the Online Számla schemas span. */
-export type NsKey = 'common' | 'base' | 'data' | 'api' | 'annul' | 'metrics';
+export type NsKey =
+  // NTCA common + Online Számla (OSA 3.0)
+  | 'common'
+  | 'base'
+  | 'data'
+  | 'api'
+  | 'annul'
+  | 'metrics'
+  // eÁFA / eVAT (EAR 2.0)
+  | 'earApi'
+  | 'earBase'
+  | 'earData';
 
 export const NAMESPACES: Record<NsKey, string> = {
   common: 'http://schemas.nav.gov.hu/NTCA/1.0/common',
@@ -16,6 +27,9 @@ export const NAMESPACES: Record<NsKey, string> = {
   api: 'http://schemas.nav.gov.hu/OSA/3.0/api',
   annul: 'http://schemas.nav.gov.hu/OSA/3.0/annul',
   metrics: 'http://schemas.nav.gov.hu/OSA/3.0/metrics',
+  earApi: 'http://schemas.nav.gov.hu/EAR/2.0/api',
+  earBase: 'http://schemas.nav.gov.hu/EAR/2.0/base',
+  earData: 'http://schemas.nav.gov.hu/EAR/2.0/data',
 };
 
 /** How a simple type's value is carried on the wire. */
