@@ -48,6 +48,24 @@ const TARGETS: Target[] = [
     outDir: 'packages/evat/src/generated',
     messages: false,
   },
+  {
+    label: 'eNyugta / eReceipt (ERECEIPT 1.1)',
+    // documentData embeds the OSA invoice *data* (invoiceData), but not the OSA
+    // online-invoice API (invoiceApi), so that is deliberately left out.
+    schemaFiles: [
+      'schemas/ERECEIPT/1.0/common.xsd',
+      'schemas/ERECEIPT/1.0/invoiceBase.xsd',
+      'schemas/ERECEIPT/1.0/invoiceData.xsd',
+      'schemas/ERECEIPT/1.1/eReceiptBase.xsd',
+      'schemas/ERECEIPT/1.1/communicationData.xsd',
+      'schemas/ERECEIPT/1.1/documentData.xsd',
+      'schemas/ERECEIPT/1.1/documentMessage.xsd',
+      'schemas/ERECEIPT/1.1/reportMessage.xsd',
+      'schemas/ERECEIPT/1.1/eReceiptApi.xsd',
+    ],
+    outDir: 'packages/receipt/src/generated',
+    messages: false,
+  },
 ];
 
 function generate(target: Target): void {
