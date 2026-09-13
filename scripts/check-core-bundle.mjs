@@ -11,6 +11,12 @@ import { gzipSync } from 'node:zlib';
 
 const entry = 'packages/core/dist/index.js';
 
+// Bundle-size budget for the main entry, gzipped. Headroom over today's size
+// (~86 KiB) so ordinary growth is fine, but a heavy new dependency — or the
+// @noble Web provider creeping back onto the main entry — trips it. Override
+// with CORE_BUNDLE_GZIP_BUDGET_KIB when a deliberate jump is justified.
+const GZIP_BUDGET_KIB = Number(process.env.CORE_BUNDLE_GZIP_BUDGET_KIB ?? 120);
+
 const result = await build({
   entryPoints: [entry],
   bundle: true,
@@ -34,7 +40,19 @@ if (noble.length > 0) {
 const output = result.outputFiles[0];
 const bytes = output.contents.length;
 const gzip = gzipSync(output.text).length;
+const gzipKiB = gzip / 1024;
+
+if (gzipKiB > GZIP_BUDGET_KIB) {
+  console.error(
+    `FAIL: ${entry} is ${gzipKiB.toFixed(1)} KiB gzip, over the ` +
+      `${GZIP_BUDGET_KIB} KiB budget.\n` +
+      'Check what new code entered the graph; raise CORE_BUNDLE_GZIP_BUDGET_KIB ' +
+      'only for a deliberate, justified increase.',
+  );
+  process.exit(1);
+}
+
 console.log(
   `OK: ${entry} — ${modules.length} modules, ${(bytes / 1024).toFixed(1)} KiB ` +
-    `(${(gzip / 1024).toFixed(1)} KiB gzip), no @noble in the graph.`,
+    `(${gzipKiB.toFixed(1)} KiB gzip, budget ${GZIP_BUDGET_KIB} KiB), no @noble in the graph.`,
 );
