@@ -27,5 +27,8 @@
   },
   "scripts": {
     "build": "tsc -b"
+  },
+  "dependencies": {
+    "node-forge": "^1.4.0"
   }
 }

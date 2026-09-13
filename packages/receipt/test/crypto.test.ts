@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { gunzipSync, gzipSync } from 'node:zlib';
+import forge from 'node-forge';
 import {
   decryptDocument,
   encryptDocument,
+  generateCsr,
   generateEncryptionKeyPair,
   generateRsaKeyPair,
   parseCertificate,
@@ -42,6 +44,18 @@ describe('key pairs and certificates', () => {
     const { privateKey, publicKey } = generateEncryptionKeyPair();
     expect(privateKey).toContain('BEGIN PRIVATE KEY');
     expect(publicKey).toContain('BEGIN PUBLIC KEY');
+  });
+
+  it('generates a PKCS#10 CSR with the requested common name and a matching key', () => {
+    const { csrPem, privateKeyPem, publicKeyPem } = generateCsr('AP12345678', 1024);
+    expect(csrPem).toContain('BEGIN CERTIFICATE REQUEST');
+    expect(privateKeyPem).toContain('PRIVATE KEY');
+    expect(publicKeyPem).toContain('BEGIN PUBLIC KEY');
+
+    const csr = forge.pki.certificationRequestFromPem(csrPem);
+    expect(csr.subject.getField('CN')?.value).toBe('AP12345678');
+    // The CSR is self-signed with the request key.
+    expect(csr.verify()).toBe(true);
   });
 
   it('rejects input that is not a certificate', () => {
