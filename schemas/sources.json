@@ -315,6 +315,11 @@
           "source_path": "src/schemas/hu/gov/nav/vdr/earData.xsd",
           "vendored_path": "schemas/EAR/2.0/earData.xsd",
           "sha256": "dc3de15568b94f88ac78ac69474bfda342015da9c1793f619acb8554f33f0ab5"
+        },
+        {
+          "source_path": "docs/standard_adokod/TAX_CODE_CATALOG_20260904_extended.xlsx",
+          "vendored_path": "schemas/EAR/tax-code-catalog/TAX_CODE_CATALOG_20260904_extended.xlsx",
+          "sha256": "63433c0e43f324bec254e5b77d599eb9b2e73d5638d0827a05ddcf101a6d895f"
         }
       ]
     },

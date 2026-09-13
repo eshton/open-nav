@@ -24,6 +24,7 @@
     "docs": "pnpm build && typedoc",
     "codegen": "tsc -b packages/codegen && node packages/codegen/dist/main.js && prettier --write --log-level warn packages/core/src/generated packages/evat/src/generated packages/receipt/src/generated",
     "codegen:check": "pnpm codegen && git diff --exit-code -- packages/core/src/generated packages/evat/src/generated packages/receipt/src/generated",
+    "codegen:taxcodes": "python3 scripts/generate_tax_codes.py && prettier --write --log-level warn packages/evat/src/generated/tax-codes.ts",
     "licences": "node scripts/check-licences.mjs",
     "licences:fix": "node scripts/check-licences.mjs --fix",
     "pack": "pnpm build && node scripts/pack-packages.mjs",
