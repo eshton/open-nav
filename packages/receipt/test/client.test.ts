@@ -85,6 +85,25 @@ describe('ReceiptClient', () => {
     expect(req.currentOperatorSiteProcessId).toBe('PROC-1');
   });
 
+  it('queries a taxpayer by tax number', async () => {
+    const { fetch, calls } = stub();
+    await client(fetch).queryTaxpayer('12345678');
+
+    expect(calls[0]!.url).toBe('https://data.example/queryTaxpayer');
+    const req = parseDocument(calls[0]!.body).value as { APNumber: string; taxNumber: string };
+    expect(req.APNumber).toBe('AP12345678');
+    expect(req.taxNumber).toBe('12345678');
+  });
+
+  it('looks up a product by code', async () => {
+    const { fetch, calls } = stub();
+    await client(fetch).getProductByCode('01012100');
+
+    expect(calls[0]!.url).toBe('https://data.example/getProductByCode');
+    const req = parseDocument(calls[0]!.body).value as { productCode: string };
+    expect(req.productCode).toBe('01012100');
+  });
+
   it('requires a client certificate when no custom fetch is supplied', async () => {
     const bare = new ReceiptClient({ apNumber: 'AP1', baseUrl: 'https://data.example' });
     await expect(bare.hello({ currentOperatorSiteProcessId: 'P' })).rejects.toThrow(

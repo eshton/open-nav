@@ -136,6 +136,25 @@ function respond(
         taxNumber: request.taxNumber ?? '00000000',
       });
 
+    case 'queryTaxpayer':
+      return serializeDocument('QueryTaxpayerResponse', {
+        header: OK_HEADER,
+        result: { funcCode: 'OK' },
+        APNumber: ap,
+        callbackRequired,
+        taxpayerValidity: true,
+      });
+
+    case 'getProductByCode':
+      return serializeDocument('GetProductByCodeResponse', {
+        header: OK_HEADER,
+        result: { funcCode: 'OK' },
+        APNumber: ap,
+        callbackRequired,
+        numberOfProducts: 0,
+        products: { productItem: [] },
+      });
+
     default:
       throw new Error(`unknown operation ${operation}`);
   }
