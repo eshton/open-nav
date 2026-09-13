@@ -75,12 +75,74 @@ export async function postMultipart(
   });
 }
 
+/**
+ * A declaration download: the parsed XML response plus the binary payload
+ * carried in the multipart response's `application/octet-stream` part.
+ */
+export interface EvatDownload extends EvatResponse {
+  /** The octet-stream part (e.g. the gzipped analytics), if present. */
+  payload?: Uint8Array;
+}
+
+/**
+ * POST an XML request to an operation whose response is `multipart/form-data`
+ * (queryDeclarationData): the XML part is parsed, the octet-stream part is
+ * returned as bytes. Parts are matched by content-type, since the spec does not
+ * name the form fields.
+ */
+export async function postXmlForMultipart(
+  baseUrl: string,
+  operation: string,
+  xml: string,
+  options: EvatTransportOptions = {},
+): Promise<EvatDownload> {
+  const response = await rawPost(baseUrl, operation, options, {
+    body: xml,
+    headers: { 'content-type': 'application/xml', accept: 'multipart/form-data, application/xml' },
+  });
+
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('multipart/')) {
+    // NAV may answer a not-found or an error as plain XML.
+    const body = await response.text();
+    return interpret(operation, response.status, body);
+  }
+
+  const form = await response.formData();
+  let xmlPart: string | undefined;
+  let payload: Uint8Array | undefined;
+  for (const value of form.values()) {
+    if (typeof value === 'string') {
+      xmlPart ??= value;
+      continue;
+    }
+    const bytes = new Uint8Array(await value.arrayBuffer());
+    if (value.type.includes('xml')) xmlPart ??= new TextDecoder().decode(bytes);
+    else payload ??= bytes;
+  }
+  if (!xmlPart) {
+    throw new NavTransportError(`eVAT ${operation} multipart response had no XML part`);
+  }
+  return { ...interpret(operation, response.status, xmlPart), ...(payload ? { payload } : {}) };
+}
+
 async function send(
   baseUrl: string,
   operation: string,
   options: EvatTransportOptions,
   request: { body: string | FormData; headers: Record<string, string> },
 ): Promise<EvatResponse> {
+  const response = await rawPost(baseUrl, operation, options, request);
+  const body = await response.text();
+  return interpret(operation, response.status, body);
+}
+
+async function rawPost(
+  baseUrl: string,
+  operation: string,
+  options: EvatTransportOptions,
+  request: { body: string | FormData; headers: Record<string, string> },
+): Promise<Response> {
   const doFetch = options.fetch ?? globalThis.fetch;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   let base = baseUrl;
@@ -89,9 +151,8 @@ async function send(
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-  let response: Response;
   try {
-    response = await doFetch(url, {
+    return await doFetch(url, {
       method: 'POST',
       headers: { ...request.headers, ...options.headers },
       body: request.body,
@@ -102,9 +163,6 @@ async function send(
   } finally {
     clearTimeout(timer);
   }
-
-  const body = await response.text();
-  return interpret(operation, response.status, body);
 }
 
 /** Parse the response body and turn a NAV error verdict into an exception. */

@@ -155,6 +155,46 @@ describe('EvatClient submitDeclaration', () => {
   });
 });
 
+describe('EvatClient queries', () => {
+  it('sends a declaration-list query with the date window', async () => {
+    const { fetch, calls } = stubFetch(() =>
+      serializeDocument('QueryDeclarationListResponse', {
+        header: { requestId: 'R', timestamp: '2026-05-15T10:20:30.000Z', requestVersion: '1.0' },
+        result: { funcCode: 'OK' },
+      }),
+    );
+    await client(fetch).queryDeclarationList({
+      taxpointDateFrom: '2026-01-01',
+      taxpointDateTo: '2026-03-31',
+    });
+    const req = parseDocument(calls[0]!.body).value as {
+      taxpointDateFrom: string;
+      taxpointDateTo: string;
+    };
+    expect(calls[0]!.url).toBe('https://evat.example/analyticsService/v1/queryDeclarationList');
+    expect(req.taxpointDateFrom).toBe('2026-01-01');
+    expect(req.taxpointDateTo).toBe('2026-03-31');
+  });
+
+  it('downloads declaration data from a multipart response', async () => {
+    const payload = new Uint8Array([1, 2, 3, 4, 5]);
+    const responseXml = serializeDocument('QueryDeclarationDataResponse', {
+      header: { requestId: 'R', timestamp: '2026-05-15T10:20:30.000Z', requestVersion: '1.0' },
+      result: { funcCode: 'OK' },
+    });
+    const fetch = (async () => {
+      const form = new FormData();
+      form.append('response', new Blob([responseXml], { type: 'application/xml' }));
+      form.append('data', new Blob([payload], { type: 'application/octet-stream' }));
+      return new Response(form, { status: 200 });
+    }) as unknown as typeof globalThis.fetch;
+
+    const download = await client(fetch).queryDeclarationData('PROC-9');
+    expect(download.root).toBe('QueryDeclarationDataResponse');
+    expect(download.payload).toEqual(payload);
+  });
+});
+
 describe('EvatClient errors', () => {
   it('raises NavApiError on an ERROR verdict', async () => {
     const { fetch } = stubFetch(() =>
