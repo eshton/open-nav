@@ -62,6 +62,9 @@ importers:
       '@open-nav/core':
         specifier: workspace:*
         version: link:../packages/core
+      '@open-nav/evat':
+        specifier: workspace:*
+        version: link:../packages/evat
       '@open-nav/invoicing':
         specifier: workspace:*
         version: link:../packages/invoicing
