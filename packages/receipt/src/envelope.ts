@@ -31,7 +31,11 @@ export const ENVELOPE_VERSION = '1.0';
 /** A built envelope together with the single-use key that decrypts it. */
 export interface BuiltEnvelope<T> {
   envelope: T;
-  /** The fresh AES-256 key (base64) — set as the request's `decryptKey`. */
+  /**
+   * The fresh AES-256 key (base64) — set as the request's `decryptKey`. Sent to
+   * NAV in the clear over mutual TLS, exactly as §4.5.2 specifies (it is not
+   * key-wrapped; the customer-facing ECIES flow is a separate concern).
+   */
   decryptKey: string;
 }
 

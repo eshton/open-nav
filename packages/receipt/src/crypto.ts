@@ -123,8 +123,15 @@ export function generateRsaKeyPair(modulusLength = 2048): KeyPairPem {
 }
 
 /**
- * Generate the SECP256R1 (P-256) encryption key pair used to protect the
- * customer-data key (§4.5.1, RFC 5480).
+ * Generate the SECP256R1 (P-256) ECC encryption key pair of §4.5.1 (RFC 5480).
+ *
+ * This is a primitive for the **customer-facing** receipt flow, which is
+ * separate from the NAV submission envelope: the customer presents their ECC
+ * public key (via QR), and the register ECIES-encrypts the customer's receipt
+ * copy so only the customer's private key can read it. It is NOT used to wrap
+ * the submission `decryptKey` — that AES key is sent to NAV in the clear over
+ * mutual TLS, exactly as §4.5.2 specifies. The full ECIES `creceipt` builder is
+ * not implemented yet (tracked in ONAV-46); this key pair is its building block.
  */
 export function generateEncryptionKeyPair(): KeyPairPem {
   return generateKeyPairSync('ec', {
