@@ -184,7 +184,13 @@ export function createDataExport(
 
 /** An invoice number can contain `/`, which a file name cannot. */
 function safeFileName(invoiceNumber: string): string {
-  const cleaned = invoiceNumber.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
+  const collapsed = invoiceNumber.replace(/[^A-Za-z0-9._-]+/g, '-');
+  // Trim leading/trailing dashes without a backtracking regex (ReDoS-safe).
+  let start = 0;
+  let end = collapsed.length;
+  while (start < end && collapsed[start] === '-') start += 1;
+  while (end > start && collapsed[end - 1] === '-') end -= 1;
+  const cleaned = collapsed.slice(start, end);
   return cleaned === '' ? 'invoice' : cleaned;
 }
 

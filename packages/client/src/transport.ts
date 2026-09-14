@@ -2,6 +2,7 @@ import {
   NavApiError,
   NavTransportError,
   parseDocument,
+  trimTrailingSlash,
   type NavValidationMessage,
 } from '@open-nav/core';
 
@@ -43,7 +44,7 @@ export async function postXml(
   const doFetch = options.fetch ?? globalThis.fetch;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const attempts = retryable ? (options.retries ?? DEFAULT_RETRIES) + 1 : 1;
-  const url = `${baseUrl.replace(/\/+$/, '')}/${operation}`;
+  const url = `${trimTrailingSlash(baseUrl)}/${operation}`;
 
   let lastError: unknown;
   let retryAfterMs: number | undefined;

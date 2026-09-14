@@ -36,7 +36,7 @@ console.log(`Packed ${tarballs.length} packages into ${outDir}\n`);
 
 /** Whether name@version is already on the registry (so a re-run can resume). */
 async function isPublished(name, version) {
-  const url = `https://registry.npmjs.org/${name.replace('/', '%2f')}/${version}`;
+  const url = `https://registry.npmjs.org/${name.replace(/\//g, '%2f')}/${version}`;
   try {
     const response = await fetch(url, { headers: { accept: 'application/json' } });
     return response.status === 200;
