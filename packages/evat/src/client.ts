@@ -244,13 +244,24 @@ export class EvatClient {
   }
 
   /** NAV's compiled VAT-return (BEVFELD) data for a processed declaration. */
-  queryVatDeclarationData(
-    declarationProcessingId: string,
-  ): Promise<QueryVatDeclarationDataResponse> {
-    return this.execute('queryVatDeclarationData', 'QueryVatDeclarationDataRequest', {
+  /**
+   * NAV's compiled VAT-return (BEVFELD) data for a processed declaration.
+   *
+   * The response is `multipart/form-data`: the parsed XML (`value`) plus the
+   * compiled data as the octet-stream `payload` (confirmed live, EVAT-10). Use
+   * {@link decodeDownloadPayload} to turn the bytes into the XML document.
+   */
+  queryVatDeclarationData(declarationProcessingId: string): Promise<EvatDownload> {
+    const requestId = createRequestId(this.requestIdPrefix);
+    const timestamp = toHeaderTimestamp(this.now());
+    const signature = requestSignature(requestId, timestamp, this.credentials.signKey);
+    const request = {
+      ...this.envelope(requestId, timestamp, signature),
       declarationProcessingId,
       declarationSchema: VAT_DECLARATION,
-    });
+    };
+    const xml = serializeDocument('QueryVatDeclarationDataRequest', request);
+    return postXmlForMultipart(this.baseUrl, 'queryVatDeclarationData', xml, this.transport);
   }
 
   /**
