@@ -91,7 +91,7 @@ describe('createReceiptMock', () => {
 
     const ops = mock.state.requests.map((r) => r.operation);
     expect(ops).toEqual([
-      'register',
+      'registration',
       'cert',
       'hello',
       'document',

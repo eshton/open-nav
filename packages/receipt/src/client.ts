@@ -23,25 +23,35 @@ export const RECEIPT_DATA_REQUEST_VERSION = '1.0';
 export const RECEIPT_DATA_HEADER_VERSION = '1.0';
 
 /**
- * Endpoints for the authenticated data services. Host + per-operation paths are
- * not in the published spec PDF (they live in NAV's apidog), so they are
- * configurable and best-effort, to be pinned against the live test system.
+ * Base URL (host only) for the authenticated data services of the **hardware**
+ * e-cash register, over mutual TLS.
+ *
+ * Pinned from NAV's apidog collection: the test ("BV") secured host is
+ * `navi-bv-sec.enyugta.nav.gov.hu`; production drops the `-bv` suffix (not yet
+ * confirmed on the live system). The per-operation service path lives in
+ * {@link DEFAULT_PATHS}, because NAV serves `document` under `eReceiptMgmt/v1`
+ * but `report` under `eReceipt/v1`. Pass full URLs via
+ * {@link ReceiptClientOptions.endpoints} to override.
  */
 export const RECEIPT_DATA_BASE_URLS = {
-  test: 'https://lekerdezo.enyugta.nav.gov.hu',
-  production: 'https://lekerdezo.enyugta.nav.gov.hu',
+  test: 'https://navi-bv-sec.enyugta.nav.gov.hu',
+  production: 'https://navi-sec.enyugta.nav.gov.hu',
 } as const;
 
 type OperationKey =
   'hello' | 'cashRegisterInfo' | 'document' | 'report' | 'queryTaxpayer' | 'getProductByCode';
 
+// Service path + operation, from NAV's apidog. document/report deliberately
+// differ (eReceiptMgmt/v1 vs eReceipt/v1). queryTaxpayer / getProductByCode are
+// not in the hardware apidog export — their paths here are best-effort, to be
+// confirmed against the live system.
 const DEFAULT_PATHS: Record<OperationKey, string> = {
-  hello: 'hello',
-  cashRegisterInfo: 'cashRegisterInfo',
-  document: 'document',
-  report: 'report',
-  queryTaxpayer: 'queryTaxpayer',
-  getProductByCode: 'getProductByCode',
+  hello: 'eReceiptMgmt/v1/hello',
+  cashRegisterInfo: 'eReceiptMgmt/v1/cashRegisterInfo',
+  document: 'eReceiptMgmt/v1/document',
+  report: 'eReceipt/v1/report',
+  queryTaxpayer: 'eReceiptMgmt/v1/queryTaxpayer',
+  getProductByCode: 'eReceiptMgmt/v1/getProductByCode',
 };
 
 export interface ReceiptClientOptions {

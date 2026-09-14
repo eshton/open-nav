@@ -91,7 +91,7 @@ function respond(
   callbackRequired: boolean,
 ): string {
   switch (operation) {
-    case 'register':
+    case 'registration':
     case 'renewCertificate':
       // A full RegistrationResponse nests required vat/operatorSite trees; the
       // clients only read the result verdict, so return an OK envelope.

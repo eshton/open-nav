@@ -13,16 +13,21 @@ export const RECEIPT_REQUEST_VERSION = '1.0';
 export const RECEIPT_HEADER_VERSION = '1.0';
 
 /**
- * Endpoint URLs for the bootstrap (registration / certificate) services.
+ * Base URL for the bootstrap (device-registration) service of the **hardware**
+ * e-cash register — the unauthenticated `POST /registration`, which needs no
+ * client certificate yet.
  *
- * The exact host per environment and the per-operation path are not in the
- * published spec PDF (they live in NAV's apidog); these are best-effort and
- * configurable, to be pinned against the live test system. Pass full URLs via
- * {@link ReceiptRegistrationOptions.endpoints} to override.
+ * Pinned from NAV's apidog collection (`docs/apidog/NAV Hardveres…`): the test
+ * ("BV") host is `navi-bv.enyugta.nav.gov.hu`, service path `/eReceiptMgmt/v1`.
+ * The production host drops the `-bv` suffix (not yet confirmed on the live
+ * system). Note: `fam.enyugta.nav.gov.hu` is the *cloud* register (FAM), a
+ * different REST API — not this XML/XSD interface. `renewCertificate` and the
+ * data services are on the *secured* host (see `RECEIPT_DATA_BASE_URLS`). Pass
+ * full URLs via {@link ReceiptRegistrationOptions.endpoints} to override.
  */
 export const RECEIPT_BASE_URLS = {
-  test: 'https://fam.enyugta.nav.gov.hu',
-  production: 'https://fam.enyugta.nav.gov.hu',
+  test: 'https://navi-bv.enyugta.nav.gov.hu/eReceiptMgmt/v1',
+  production: 'https://navi.enyugta.nav.gov.hu/eReceiptMgmt/v1',
 } as const;
 
 export interface ReceiptRegistrationOptions {
@@ -101,7 +106,11 @@ export class ReceiptRegistrationClient {
       software: this.software,
     };
     const xml = serializeDocument('RegistrationRequest', request);
-    const { value } = await postReceiptXml(this.url('register', 'register'), xml, this.transport);
+    const { value } = await postReceiptXml(
+      this.url('register', 'registration'),
+      xml,
+      this.transport,
+    );
     return {
       response: value as RegistrationResponse,
       ...(authentication ? { authentication } : {}),

@@ -55,7 +55,7 @@ describe('ReceiptRegistrationClient', () => {
     expect(result.response).toBeDefined();
     expect(result.authentication?.csrPem).toContain('CERTIFICATE REQUEST');
     expect(result.signing?.privateKeyPem).toContain('PRIVATE KEY');
-    expect(calls[0]!.url).toBe('https://fam.example/register');
+    expect(calls[0]!.url).toBe('https://fam.example/registration');
 
     // The request carried the AP number, install code and both CSRs as base64
     // DER (whitespace-free, so it round-trips through XML cleanly).
