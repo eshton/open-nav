@@ -1,6 +1,6 @@
 {
   "name": "@open-nav/client",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "API client for the Hungarian Tax Authority (NAV) Online Számla 3.0 invoice service",
   "keywords": [
     "nav",

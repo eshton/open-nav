@@ -1,6 +1,6 @@
 {
   "name": "@open-nav/cli",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Command line tool for the Hungarian Tax Authority (NAV) Online Számla API",
   "keywords": [
     "nav",

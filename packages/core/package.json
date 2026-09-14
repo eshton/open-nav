@@ -1,6 +1,6 @@
 {
   "name": "@open-nav/core",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Types, invoice building, XML serialisation and cryptography for the Hungarian NAV Online Számla API",
   "keywords": [
     "nav",

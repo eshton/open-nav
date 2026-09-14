@@ -1,6 +1,6 @@
 {
   "name": "@open-nav/evat",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Client for NAV's eÁFA (eVAT) M2M VAT-return interface",
   "license": "MIT",
   "author": "open-nav contributors",

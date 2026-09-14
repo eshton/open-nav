@@ -1,6 +1,6 @@
 {
   "name": "@open-nav/receipt",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Client and cryptography for NAV's eNyugta (eReceipt / e-cash-register) M2M interface",
   "license": "MIT",
   "author": "open-nav contributors",
