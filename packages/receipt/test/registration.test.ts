@@ -83,4 +83,54 @@ describe('ReceiptRegistrationClient', () => {
     const cert = await client.downloadCertificate('https://fam.example/cert/sign/1', 0);
     expect(cert).toContain('BEGIN CERTIFICATE');
   });
+
+  it('uses supplied CSRs (no generation) and an endpoints override', async () => {
+    const { fetch, calls } = stub(() => okResponse());
+    const client = new ReceiptRegistrationClient({
+      software,
+      transport: { fetch },
+      endpoints: { register: 'https://override.example/registration' },
+    });
+    const result = await client.register({
+      apNumber: 'AP12345678',
+      registrationNumber: 'INSTALL-CODE-1',
+      imei: '350000000000001',
+      imsi: '216300000000001',
+      authenticationCsr: 'AUTHCSRDER',
+      signingCsr: 'SIGNCSRDER',
+    });
+    // Nothing generated when CSRs are supplied.
+    expect(result.authentication).toBeUndefined();
+    expect(result.signing).toBeUndefined();
+    expect(calls[0]!.url).toBe('https://override.example/registration');
+    const req = parseDocument(calls[0]!.body).value as {
+      authenticationCertificateRequest: string;
+      signingCertificateRequest: string;
+    };
+    expect(req.authenticationCertificateRequest).toBe('AUTHCSRDER');
+    expect(req.signingCertificateRequest).toBe('SIGNCSRDER');
+  });
+
+  it('renews a certificate with the optional fields', async () => {
+    const { fetch, calls } = stub(() => okResponse());
+    const client = new ReceiptRegistrationClient({
+      software,
+      baseUrl: 'https://fam.example',
+      transport: { fetch },
+    });
+    await client.renewCertificate({
+      apNumber: 'AP12345678',
+      taxNumber: '12345678',
+      certificateType: 'SIGNING',
+      renewCertificateCode: 'RCODE',
+      certificateRequest: 'CSRDER',
+    });
+    expect(calls[0]!.url).toBe('https://fam.example/renewCertificate');
+    const req = parseDocument(calls[0]!.body).value as {
+      renewCertificateCode: string;
+      certificateRequest: string;
+    };
+    expect(req.renewCertificateCode).toBe('RCODE');
+    expect(req.certificateRequest).toBe('CSRDER');
+  });
 });
