@@ -66,7 +66,18 @@ payload part; `queryVatDeclarationData`/`queryDeclarationData` return
 `{ value, payload }` and `decodeDownloadPayload` gunzips the bytes. The whole
 read path — discovery and content — is verified against NAV's eÁFA test system.
 
-`queryDeclarationList` caps a query window at **35 days**; split longer ranges.
+`queryDeclarationList` caps a query window at **35 days**. For a longer range,
+`queryAllDeclarations` walks the 35-day windows for you (and `chunkTaxpointRange`
+exposes the split):
+
+```ts
+import { queryAllDeclarations } from '@open-nav/evat';
+
+const all = await queryAllDeclarations(client, {
+  taxpointDateFrom: '2026-01-01',
+  taxpointDateTo: '2026-12-31',
+});
+```
 
 ## Filing a declaration
 

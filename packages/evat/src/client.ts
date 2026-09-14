@@ -265,9 +265,13 @@ export class EvatClient {
   }
 
   /**
-   * Download a declaration's data. The response is multipart: the parsed XML
-   * (`value`) plus the analytics payload bytes (`payload`, the octet-stream
-   * part — typically gzipped).
+   * Read a submitted declaration's own data (the analytics as filed).
+   *
+   * NAV returns the data inline in the XML (`value.declarationData`), so
+   * `payload` is normally absent; the multipart download path is used only
+   * because NAV may switch to a `file` part for a large declaration, in which
+   * case `payload` carries the (gzipped) bytes — see {@link decodeDownloadPayload}.
+   * For NAV's compiled VAT-return figures use {@link queryVatDeclarationData}.
    */
   queryDeclarationData(declarationProcessingId: string): Promise<EvatDownload> {
     const requestId = createRequestId(this.requestIdPrefix);
