@@ -1,6 +1,6 @@
 {
   "name": "@open-nav/codegen",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "description": "Generates TypeScript types and runtime schema metadata from the official NAV XSDs",
   "license": "MIT",
