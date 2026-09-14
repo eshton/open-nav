@@ -5,11 +5,13 @@
   "type": "module",
   "description": "Runnable end-to-end examples. Not published.",
   "scripts": {
-    "report": "node report-invoice.mjs"
+    "report": "node report-invoice.mjs",
+    "evat-smoke": "node evat-smoke.mjs"
   },
   "dependencies": {
     "@open-nav/client": "workspace:*",
     "@open-nav/core": "workspace:*",
+    "@open-nav/evat": "workspace:*",
     "@open-nav/invoicing": "workspace:*",
     "@open-nav/mock-server": "workspace:*"
   }

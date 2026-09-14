@@ -29,12 +29,14 @@ export interface UploadPart {
 /**
  * NAV part names for the two-message multipart uploads.
  *
- * The interface spec states the request is `application/xml` and the payload
- * `application/octet-stream` but does not print the form-field names. These are
- * a best-effort default and are configurable via {@link EvatTransportOptions}
- * so a live run (EVAT-10) can pin them without a code change.
+ * Confirmed against the eÁFA test system (EVAT-10): NAV requires exactly two
+ * parts named `body` (the `application/xml` request) and `file` (the
+ * `application/octet-stream` payload). Sending any other name for the request
+ * part is rejected with `INVALID_REQUEST` / `INVALID_PARTS`: "The multipart
+ * request must contain 2 parts named \"body\" and \"file\"." Still configurable
+ * via {@link EvatTransportOptions} should NAV ever change it.
  */
-export const MULTIPART_FIELDS = { request: 'request', file: 'file' } as const;
+export const MULTIPART_FIELDS = { request: 'body', file: 'file' } as const;
 
 /** POST an XML request to an eVAT operation and parse the response. */
 export async function postXml(
