@@ -1,5 +1,6 @@
 export * from './generated/index.js';
 export * from './crypto.js';
+export * from './ecies.js';
 export * from './canon.js';
 export * from './codec.js';
 export * from './envelope.js';
