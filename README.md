@@ -1,8 +1,9 @@
 # open-nav
 
 Open source libraries and tools for the Hungarian Tax and Customs
-Administration's (NAV) **Online Számla** system — building invoice data that
-NAV accepts, reporting it, and pulling invoices issued to you.
+Administration's (NAV) M2M systems — **Online Számla** (building invoice data
+NAV accepts, reporting it, and pulling invoices issued to you), **eÁFA (eVAT)**
+VAT returns, and **eNyugta** e-cash-register receipts.
 
 [![CI](https://github.com/eshton/open-nav/actions/workflows/ci.yml/badge.svg)](https://github.com/eshton/open-nav/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@open-nav/core.svg?label=%40open-nav%2Fcore)](https://www.npmjs.com/package/@open-nav/core)
@@ -59,6 +60,11 @@ A library should absorb all four. That is the entire premise of this project.
   of invoicing programs by decree 23/2014. (VI. 30.) NGM.
 - A local mock of the invoice service, so integrations can be tested without
   NAV credentials.
+- Other NAV M2M systems the project has grown into: **eÁFA (eVAT)**, the
+  VAT-return interface (`@open-nav/evat`, published, read + filing verified
+  against NAV's test system); and **eNyugta**, the e-cash-register interface
+  (`@open-nav/receipt`, work in progress, not yet live-tested). See
+  [Packages and what's verified](#packages-and-whats-verified).
 
 **Out of scope**
 
@@ -66,9 +72,9 @@ A library should absorb all four. That is the entire premise of this project.
   audit trails are product concerns with legal consequences; this project
   gives you the primitives and deliberately does not claim to discharge your
   obligations.
-- Other NAV systems — online cash registers, EKÁER, eÁFA/e-VAT. Different
-  interfaces, different authentication. The repository layout leaves room for
-  them; nothing is promised.
+- Still-untouched NAV systems — EKÁER, and others. Different interfaces,
+  different authentication. The repository layout leaves room for them; nothing
+  is promised.
 - Any claim of certification. "Schema-conformant and tested" is a statement
   about this code. Compliance remains yours.
 
