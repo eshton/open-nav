@@ -220,7 +220,11 @@ async function rawPost(
       signal: controller.signal,
     });
   } catch (cause) {
-    throw new NavTransportError(`eVAT ${operation} request failed: ${(cause as Error).message}`);
+    const message =
+      (cause as Error).name === 'AbortError'
+        ? `eVAT ${operation} timed out after ${timeoutMs}ms`
+        : `eVAT ${operation} request failed: ${(cause as Error).message}`;
+    throw new NavTransportError(message);
   } finally {
     clearTimeout(timer);
   }
@@ -247,8 +251,10 @@ function interpret(operation: string, status: number, body: string): EvatRespons
     });
   }
 
-  const result = (value as { result?: { funcCode?: string; errorCode?: string; message?: string } })
-    .result;
+  const result =
+    value && typeof value === 'object'
+      ? (value as { result?: { funcCode?: string; errorCode?: string; message?: string } }).result
+      : undefined;
   if (result?.funcCode === 'ERROR' || status >= 300) {
     throw new NavApiError({
       message: result?.message ?? `eVAT ${operation} failed with HTTP ${status}`,

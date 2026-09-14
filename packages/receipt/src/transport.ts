@@ -58,8 +58,10 @@ function interpret(body: string, status: number): ReceiptResponse {
     throw new NavApiError({ message: `eNyugta request failed`, status, responseBody: body });
   }
 
-  const result = (value as { result?: { funcCode?: string; errorCode?: string; message?: string } })
-    .result;
+  const result =
+    value && typeof value === 'object'
+      ? (value as { result?: { funcCode?: string; errorCode?: string; message?: string } }).result
+      : undefined;
   if (result?.funcCode === 'ERROR' || status >= 300) {
     throw new NavApiError({
       message: result?.message ?? `eNyugta request failed with HTTP ${status}`,
@@ -97,7 +99,11 @@ export async function postReceiptXml(
       signal: controller.signal,
     });
   } catch (cause) {
-    throw new NavTransportError(`eNyugta request failed: ${(cause as Error).message}`);
+    const message =
+      (cause as Error).name === 'AbortError'
+        ? `eNyugta request timed out after ${options.timeoutMs ?? DEFAULT_TIMEOUT_MS}ms`
+        : `eNyugta request failed: ${(cause as Error).message}`;
+    throw new NavTransportError(message);
   } finally {
     clearTimeout(timer);
   }
@@ -155,6 +161,11 @@ function postWithClientCertificate(
         res.on('data', (chunk: Buffer) => chunks.push(chunk));
         res.on('end', () =>
           resolve({ body: Buffer.concat(chunks).toString('utf8'), status: res.statusCode ?? 0 }),
+        );
+        // Without this, a connection reset after the headers never settles the
+        // promise (neither `end` nor the request-level `error` fires).
+        res.on('error', (cause) =>
+          reject(new NavTransportError(`eNyugta response failed: ${cause.message}`)),
         );
       },
     );

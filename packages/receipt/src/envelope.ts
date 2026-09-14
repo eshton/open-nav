@@ -63,6 +63,10 @@ export function buildDocumentEnvelope(
   signingKeyPem: string,
 ): BuiltEnvelope<SignedDocumentEnvelopeType> {
   const decryptKey = generateAesKey();
+  // Both payloads are sealed with the same key and the spec's fixed zero IV
+  // (§4.5.2, one decryptKey per request): a known, spec-mandated property, so a
+  // shared block-aligned prefix (e.g. the gzip header) yields an identical
+  // ciphertext prefix across the two parts. Not a defect we can avoid here.
   const envelopeData = seal(coreDocumentXml, decryptKey);
   const customerEnvelopeData = seal(customerDocumentXml, decryptKey);
   const { envelopeHash, envelopeSignature } = signEnvelope(
