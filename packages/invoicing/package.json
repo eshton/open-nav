@@ -1,6 +1,6 @@
 {
   "name": "@open-nav/invoicing",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Render Hungarian invoices as printable documents, and produce the tax authority data export",
   "keywords": [
     "nav",

@@ -34,6 +34,7 @@ export function publishablePackages() {
 // appears must already be able to resolve the @open-nav/core it depends on.
 const ORDER = [
   '@open-nav/core',
+  '@open-nav/evat',
   '@open-nav/client',
   '@open-nav/invoicing',
   '@open-nav/mock-server',

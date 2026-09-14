@@ -1,10 +1,9 @@
 {
   "name": "@open-nav/evat",
-  "version": "0.2.0",
-  "description": "Generated TypeScript types and schema metadata for NAV's eÁFA (eVAT) M2M interface",
+  "version": "0.2.1",
+  "description": "Client for NAV's eÁFA (eVAT) M2M VAT-return interface",
   "license": "MIT",
   "author": "open-nav contributors",
-  "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -25,6 +24,25 @@
   "engines": {
     "node": ">=20.10.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eshton/open-nav.git",
+    "directory": "packages/evat"
+  },
+  "homepage": "https://github.com/eshton/open-nav#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "nav",
+    "eafa",
+    "evat",
+    "vat",
+    "afa",
+    "hungary",
+    "tax",
+    "declaration"
+  ],
   "scripts": {
     "build": "tsc -b"
   },
