@@ -46,11 +46,12 @@ const packages = readdirSync(join(ROOT, 'packages'), { withFileTypes: true })
 const published = packages.filter(({ manifest }) => manifest.private !== true);
 
 describe('publishable packages', () => {
-  it('are the six that are meant to be published', () => {
+  it('are the ones that are meant to be published', () => {
     expect(published.map(({ manifest }) => manifest.name).sort()).toEqual([
       '@open-nav/cli',
       '@open-nav/client',
       '@open-nav/core',
+      '@open-nav/evat',
       '@open-nav/invoicing',
       '@open-nav/mcp',
       '@open-nav/mock-server',

@@ -18,7 +18,8 @@
   "files": [
     "dist",
     "src",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "sideEffects": false,
   "engines": {
@@ -30,6 +31,7 @@
     "directory": "packages/evat"
   },
   "homepage": "https://github.com/eshton/open-nav#readme",
+  "bugs": "https://github.com/eshton/open-nav/issues",
   "publishConfig": {
     "access": "public"
   },
