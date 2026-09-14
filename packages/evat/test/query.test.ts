@@ -1,6 +1,13 @@
+import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { EvatClient } from '../src/client.js';
-import { chunkTaxpointRange, queryAllDeclarations } from '../src/query.js';
+import {
+  chunkTaxpointRange,
+  queryAllDeclarations,
+  queryAllStatements,
+  queryAllDocuments,
+  readVatDeclaration,
+} from '../src/query.js';
 import { serializeDocument } from '../src/codec.js';
 import type { EvatCredentials } from '../src/credentials.js';
 import type { SoftwareType } from '@open-nav/core';
@@ -81,5 +88,104 @@ describe('queryAllDeclarations', () => {
 
     expect(windows).toEqual(['2026-01-01', '2026-02-05', '2026-03-12']); // 3 windows
     expect(items.map((i) => i.declarationProcessingId)).toEqual(['PROC-1']);
+  });
+});
+
+function okHeader() {
+  return { requestId: 'R', timestamp: '2026-01-01T00:00:00.000Z', requestVersion: '1.0' };
+}
+
+describe('queryAllStatements', () => {
+  it('flattens statementList (the traditional returns), not declarationList', async () => {
+    const fetch = (async () =>
+      new Response(
+        serializeDocument('QueryDeclarationListResponse', {
+          header: okHeader(),
+          result: { funcCode: 'OK' },
+          statementList: {
+            statementListItem: [
+              {
+                declarationProcessingId: 'STMT-1',
+                declarationSchema: 'VAT_DECLARATION',
+                originalRequestVersion: '1.0',
+              },
+            ],
+          },
+        }),
+        { status: 200 },
+      )) as unknown as typeof globalThis.fetch;
+
+    const client = new EvatClient({ credentials, software, transport: { fetch } });
+    const items = await queryAllStatements(client, {
+      taxpointDateFrom: '2026-01-01',
+      taxpointDateTo: '2026-01-31',
+    });
+    expect(items.map((i) => i.declarationProcessingId)).toEqual(['STMT-1']);
+  });
+});
+
+describe('queryAllDocuments', () => {
+  it('resolves the async queryId, polling until DONE', async () => {
+    let resultCalls = 0;
+    const fetch = (async (url: string | URL) => {
+      const op = String(url).split('/').pop();
+      if (op === 'queryDocumentList') {
+        return new Response(
+          serializeDocument('QueryDocumentListResponse', {
+            header: okHeader(),
+            result: { funcCode: 'OK' },
+            queryId: 'Q-1',
+          }),
+          { status: 200 },
+        );
+      }
+      // First poll PROCESSING, then DONE.
+      resultCalls++;
+      return new Response(
+        serializeDocument('QueryDocumentListResultResponse', {
+          header: okHeader(),
+          result: { funcCode: 'OK' },
+          documentList: { queryResultStatus: resultCalls === 1 ? 'PROCESSING' : 'DONE' },
+        }),
+        { status: 200 },
+      );
+    }) as unknown as typeof globalThis.fetch;
+
+    const client = new EvatClient({ credentials, software, transport: { fetch } });
+    const lists = await queryAllDocuments(
+      client,
+      { taxpointDateFrom: '2026-01-01', taxpointDateTo: '2026-01-31' },
+      { intervalMs: 0 },
+    );
+    expect(lists).toHaveLength(1);
+    expect(lists[0]!.queryResultStatus).toBe('DONE');
+    expect(resultCalls).toBe(2); // polled once more after PROCESSING
+  });
+});
+
+describe('readVatDeclaration', () => {
+  it('downloads and gunzips the compiled return to XML', async () => {
+    const xml = '<VatDeclarationData>…</VatDeclarationData>';
+    const gz = gzipSync(Buffer.from(xml, 'utf8'));
+    const fetch = (async () => {
+      const form = new FormData();
+      form.append(
+        'body',
+        new Blob(
+          [
+            serializeDocument('QueryVatDeclarationDataResponse', {
+              header: okHeader(),
+              result: { funcCode: 'OK' },
+            }),
+          ],
+          { type: 'application/xml' },
+        ),
+      );
+      form.append('file', new Blob([gz], { type: 'application/octet-stream' }));
+      return new Response(form, { status: 200 });
+    }) as unknown as typeof globalThis.fetch;
+
+    const client = new EvatClient({ credentials, software, transport: { fetch } });
+    expect(await readVatDeclaration(client, 'PROC-1')).toBe(xml);
   });
 });

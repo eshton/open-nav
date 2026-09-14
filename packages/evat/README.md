@@ -56,27 +56,44 @@ const list = await client.queryDeclarationList({
   taxpointDateTo: '2026-01-31',
 });
 
-// Content — download and decode a return's compiled data.
-const download = await client.queryVatDeclarationData(declarationProcessingId);
-const xml = decodeDownloadPayload(download.payload!); // the VatDeclarationData XML
+// Content — download and decode a return's compiled data, in one call.
+import { readVatDeclaration } from '@open-nav/evat';
+const xml = await readVatDeclaration(client, declarationProcessingId); // VatDeclarationData XML
 ```
 
-The data services answer downloads as `multipart/form-data` with a gzipped
-payload part; `queryVatDeclarationData`/`queryDeclarationData` return
-`{ value, payload }` and `decodeDownloadPayload` gunzips the bytes. The whole
-read path — discovery and content — is verified against NAV's eÁFA test system.
+`readVatDeclaration` wraps `queryVatDeclarationData` (a `multipart/form-data`
+download with a gzipped payload part) and `decodeDownloadPayload` (the gunzip).
+The whole read path — discovery and content — is verified against NAV's eÁFA
+test system.
 
-`queryDeclarationList` caps a query window at **35 days**. For a longer range,
-`queryAllDeclarations` walks the 35-day windows for you (and `chunkTaxpointRange`
-exposes the split):
+### declarationList vs statementList
+
+`queryDeclarationList` returns **two** lists, and this trips people up: the
+analytics-based M2M **declarations** are in `declarationList`, while the
+traditional VAT **returns** (bevallás) — a taxpayer's regular monthly returns
+filed through ÖNYA/ÁNYK — are in `statementList`. If a query "returns nothing",
+you are probably reading the wrong one.
 
 ```ts
-import { queryAllDeclarations } from '@open-nav/evat';
+import { queryAllDeclarations, queryAllStatements } from '@open-nav/evat';
 
-const all = await queryAllDeclarations(client, {
-  taxpointDateFrom: '2026-01-01',
-  taxpointDateTo: '2026-12-31',
-});
+const declarations = await queryAllDeclarations(client, range); // declarationList
+const statements = await queryAllStatements(client, range); //    statementList
+```
+
+`queryDeclarationList` caps a query window at **35 days**; both helpers above
+walk the 35-day windows for you (and `chunkTaxpointRange` exposes the split).
+
+### Documents
+
+`queryDocumentList` is asynchronous — it returns a `queryId` you resolve with
+`queryDocumentListResult`. `queryAllDocuments` does both, polling until the
+result is ready, across the 35-day windows:
+
+```ts
+import { queryAllDocuments } from '@open-nav/evat';
+
+const lists = await queryAllDocuments(client, range); // one DocumentListType per window
 ```
 
 ## Filing a declaration

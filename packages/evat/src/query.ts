@@ -1,5 +1,6 @@
 import type { EvatClient } from './client.js';
-import type { AnalyticsListItemType } from './generated/types.js';
+import { decodeDownloadPayload } from './transport.js';
+import type { AnalyticsListItemType, DocumentListType } from './generated/types.js';
 
 /**
  * Helpers for the eÁFA read queries whose window NAV caps at 35 days.
@@ -70,4 +71,96 @@ export async function queryAllDeclarations(
     items.push(...(response.declarationList?.declarationListItem ?? []));
   }
   return items;
+}
+
+/**
+ * List every **statement** (bevallás) in a taxpoint-date range.
+ *
+ * `queryDeclarationList` returns two lists: `declarationList`, the
+ * analytics-based M2M declarations, and `statementList`, the traditional VAT
+ * returns (bevallás) — e.g. the monthly returns filed through ÖNYA/ÁNYK.
+ * {@link queryAllDeclarations} flattens the former; this flattens the latter. If
+ * a query "returns nothing", check both: a taxpayer's regular monthly returns
+ * are statements, not declarations.
+ */
+export async function queryAllStatements(
+  client: EvatClient,
+  range: TaxpointWindow,
+): Promise<AnalyticsListItemType[]> {
+  const items: AnalyticsListItemType[] = [];
+  for (const window of chunkTaxpointRange(range.taxpointDateFrom, range.taxpointDateTo)) {
+    const response = await client.queryDeclarationList(window);
+    items.push(...(response.statementList?.statementListItem ?? []));
+  }
+  return items;
+}
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+export interface ResolveOptions {
+  /** Polls before giving up on a still-PROCESSING result. Default 10. */
+  maxAttempts?: number;
+  /** Delay between polls, ms. Default 2000. */
+  intervalMs?: number;
+}
+
+/**
+ * Run a document-list query and resolve its asynchronous result.
+ *
+ * `queryDocumentList` returns a `queryId`; the result is fetched separately with
+ * `queryDocumentListResult` and may still be `PROCESSING`. This does both and
+ * polls until the result is `DONE` (or the attempts run out).
+ */
+export async function resolveDocumentList(
+  client: EvatClient,
+  window: TaxpointWindow,
+  options: ResolveOptions = {},
+): Promise<DocumentListType> {
+  const maxAttempts = options.maxAttempts ?? 10;
+  const intervalMs = options.intervalMs ?? 2000;
+  const { queryId } = await client.queryDocumentList(window);
+  for (let attempt = 0; ; attempt++) {
+    const result = await client.queryDocumentListResult(queryId);
+    const list = result.documentList;
+    if (list?.queryResultStatus === 'DONE' || attempt >= maxAttempts - 1) {
+      return list ?? ({ queryResultStatus: 'PROCESSING' } as DocumentListType);
+    }
+    await sleep(intervalMs);
+  }
+}
+
+/**
+ * Resolve the document list across every 35-day window in a range.
+ *
+ * Returns one {@link DocumentListType} per window (each carries its
+ * `invoiceDigest` / `cashRegisterDigest` / `declarationDigest` arrays).
+ */
+export async function queryAllDocuments(
+  client: EvatClient,
+  range: TaxpointWindow,
+  options: ResolveOptions = {},
+): Promise<DocumentListType[]> {
+  const lists: DocumentListType[] = [];
+  for (const window of chunkTaxpointRange(range.taxpointDateFrom, range.taxpointDateTo)) {
+    lists.push(await resolveDocumentList(client, window, options));
+  }
+  return lists;
+}
+
+/**
+ * Read a filed return's compiled data in one call: download NAV's compiled
+ * VAT-return payload and decode it to the `VatDeclarationData` XML.
+ */
+export async function readVatDeclaration(
+  client: EvatClient,
+  declarationProcessingId: string,
+): Promise<string> {
+  const download = await client.queryVatDeclarationData(declarationProcessingId);
+  if (!download.payload) {
+    throw new Error(
+      `queryVatDeclarationData returned no payload for ${declarationProcessingId} ` +
+        `(funcCode ${(download.value as { result?: { funcCode?: string } })?.result?.funcCode})`,
+    );
+  }
+  return decodeDownloadPayload(download.payload);
 }
