@@ -82,6 +82,8 @@ A library should absorb all four. That is the entire premise of this project.
 | `packages/mock-server` | A local stand-in for the service, for testing without credentials      |
 | `packages/cli`         | `open-nav` command line tool, built for scripts and agents             |
 | `packages/mcp`         | MCP server, so an AI agent can use all of the above                    |
+| `packages/evat`        | Client for NAV's eÁFA (eVAT) VAT-return M2M interface                  |
+| `packages/receipt`     | Client for NAV's eNyugta (e-cash-register) M2M interface (WIP)         |
 | `packages/codegen`     | Generates the types, schema metadata and fault catalogue from the XSDs |
 | `schemas/`             | Official NAV XSDs and message catalogues, vendored verbatim            |
 | `conformance/`         | NAV's own 41 sample documents, used as the golden test corpus          |
@@ -123,6 +125,26 @@ Being explicit, because it matters for anyone considering this in production:
 | Exchange token decryption      | Round-trip tested for padded and unpadded tokens; no official vector exists                                                                                                  |
 | Published packages             | Every tarball passes `publint` and `attw`, and all six were installed from tarballs into a clean project and exercised end to end                                            |
 | Live NAV test system           | Query and pull (outbound + inbound) verified against the live test system; invoice submission (`manageInvoice`) not yet exercised there                                      |
+
+## Packages and what's verified
+
+open-nav now covers three NAV M2M systems. Each package and what has been
+exercised against the **live NAV test system** (vs. only tests/mocks):
+
+| Package                 | System        | npm     | Verified                                                                                                                                                               |
+| ----------------------- | ------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@open-nav/core`        | shared        | 0.2.1   | Crypto against published vectors; schema round trip + validation against all 41 NAV samples                                                                            |
+| `@open-nav/client`      | Online Számla | 0.2.1   | **Live:** query + pull (inbound/outbound). Submission drives the mock end to end; not yet exercised live                                                               |
+| `@open-nav/invoicing`   | Online Számla | 0.2.1   | All 30 samples render to HTML + PDF (fonts asserted); every export parses back                                                                                         |
+| `@open-nav/mock-server` | Online Számla | 0.2.1   | Drives `@open-nav/client` end to end over HTTP with independent signature checks                                                                                       |
+| `@open-nav/cli`         | Online Számla | 0.2.1   | Exercised via the packaged binary                                                                                                                                      |
+| `@open-nav/mcp`         | Online Számla | 0.2.1   | Driven by a real MCP client and over stdio                                                                                                                             |
+| `@open-nav/evat`        | eÁFA (eVAT)   | 0.2.1   | **Live:** auth; attachment upload/list/purge; the full declaration lifecycle (upload → partition → finalize → submit); reading returns (list + compiled-data download) |
+| `@open-nav/receipt`     | eNyugta       | private | Crypto, signed envelope, registration, submission, queries and mock covered by tests. **No live testing** — needs an e-cash-register AP number                         |
+
+The eÁFA live checks were run with a real technical user against
+`api-test.eafa.nav.gov.hu` (see `examples/evat-smoke.mjs`). eNyugta is
+unpublished until it can be verified against NAV's e-cash-register test system.
 
 ## Building an invoice
 
@@ -421,6 +443,7 @@ does not pull in either.
 | `@open-nav/mock-server` | core                    | none                                                 |
 | `@open-nav/cli`         | core, client, invoicing | none                                                 |
 | `@open-nav/mcp`         | core, client, invoicing | `@modelcontextprotocol/sdk`, `zod`                   |
+| `@open-nav/evat`        | core                    | none                                                 |
 
 Every package ships its TypeScript sources next to the compiled output, so
 stepping into this code in a debugger lands in the real source.
