@@ -1,4 +1,4 @@
-import { createRequestId, toHeaderTimestamp } from '@open-nav/core';
+import { createRequestId, toHeaderTimestamp, trimTrailingSlash } from '@open-nav/core';
 import { serializeDocument } from './codec.js';
 import { generateCsr, type CsrResult } from './crypto.js';
 import { downloadCertificate, postReceiptXml, type ReceiptTransportOptions } from './transport.js';
@@ -167,8 +167,6 @@ export class ReceiptRegistrationClient {
 
   private url(key: 'register' | 'renewCertificate', path: string): string {
     if (this.endpoints[key]) return this.endpoints[key]!;
-    let base = this.baseUrl;
-    while (base.endsWith('/')) base = base.slice(0, -1);
-    return `${base}/${path}`;
+    return `${trimTrailingSlash(this.baseUrl)}/${path}`;
   }
 }

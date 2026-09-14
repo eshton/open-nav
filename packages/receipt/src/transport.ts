@@ -1,5 +1,12 @@
 import { request as httpsRequest } from 'node:https';
-import { NavApiError, NavTransportError } from '@open-nav/core';
+import {
+  DEFAULT_TIMEOUT_MS,
+  fetchWithTimeout,
+  interpretNavResponse,
+  NavApiError,
+  NavTransportError,
+  type NavHttpResponse,
+} from '@open-nav/core';
 import { parseDocument } from './codec.js';
 
 export interface ReceiptTransportOptions {
@@ -30,50 +37,14 @@ export interface SecureTransportOptions extends ReceiptTransportOptions {
   clientCertificate?: ClientCertificate;
 }
 
-export interface ReceiptResponse {
-  root: string;
-  value: unknown;
-  status: number;
-  body: string;
-}
-
-const DEFAULT_TIMEOUT_MS = 60_000;
+/** A parsed eNyugta response (the shared NAV response shape). */
+export type ReceiptResponse = NavHttpResponse;
 
 const XML_HEADERS = { 'content-type': 'application/xml', accept: 'application/xml' };
+const LABEL = 'eNyugta request';
 
-/** Parse a response body, raising NavApiError on an ERROR verdict or HTTP >= 300. */
-function interpret(body: string, status: number): ReceiptResponse {
-  let root: string;
-  let value: unknown;
-  try {
-    const parsed = parseDocument(body, { unknownElements: 'ignore' });
-    root = parsed.root;
-    value = parsed.value;
-  } catch (cause) {
-    if (status >= 200 && status < 300) {
-      throw new NavTransportError(
-        `eNyugta response was not parseable: ${(cause as Error).message}`,
-      );
-    }
-    throw new NavApiError({ message: `eNyugta request failed`, status, responseBody: body });
-  }
-
-  const result =
-    value && typeof value === 'object'
-      ? (value as { result?: { funcCode?: string; errorCode?: string; message?: string } }).result
-      : undefined;
-  if (result?.funcCode === 'ERROR' || status >= 300) {
-    throw new NavApiError({
-      message: result?.message ?? `eNyugta request failed with HTTP ${status}`,
-      status,
-      funcCode: result?.funcCode,
-      errorCode: result?.errorCode,
-      responseBody: body,
-    });
-  }
-
-  return { root, value, status, body };
-}
+const parse = (body: string): { root: string; value: unknown } =>
+  parseDocument(body, { unknownElements: 'ignore' });
 
 /**
  * POST an eNyugta XML request to a full endpoint URL and parse the response.
@@ -87,28 +58,12 @@ export async function postReceiptXml(
   xml: string,
   options: ReceiptTransportOptions = {},
 ): Promise<ReceiptResponse> {
-  const doFetch = options.fetch ?? globalThis.fetch;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
-  let response: Response;
-  try {
-    response = await doFetch(url, {
-      method: 'POST',
-      headers: { ...XML_HEADERS, ...options.headers },
-      body: xml,
-      signal: controller.signal,
-    });
-  } catch (cause) {
-    const message =
-      (cause as Error).name === 'AbortError'
-        ? `eNyugta request timed out after ${options.timeoutMs ?? DEFAULT_TIMEOUT_MS}ms`
-        : `eNyugta request failed: ${(cause as Error).message}`;
-    throw new NavTransportError(message);
-  } finally {
-    clearTimeout(timer);
-  }
-
-  return interpret(await response.text(), response.status);
+  const response = await fetchWithTimeout(
+    url,
+    { method: 'POST', headers: { ...XML_HEADERS, ...options.headers }, body: xml },
+    { fetch: options.fetch, timeoutMs: options.timeoutMs, label: LABEL },
+  );
+  return interpretNavResponse(await response.text(), response.status, { label: LABEL, parse });
 }
 
 /**
@@ -132,7 +87,7 @@ export async function postReceiptXmlSecure(
     );
   }
   const { body, status } = await postWithClientCertificate(url, xml, options);
-  return interpret(body, status);
+  return interpretNavResponse(body, status, { label: LABEL, parse });
 }
 
 /** Low-level mutual-TLS POST via Node's `https` (client certificate presented). */
@@ -142,6 +97,7 @@ function postWithClientCertificate(
   options: SecureTransportOptions,
 ): Promise<{ body: string; status: number }> {
   const cert = options.clientCertificate!;
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   return new Promise((resolve, reject) => {
     const req = httpsRequest(
       url,
@@ -169,10 +125,8 @@ function postWithClientCertificate(
         );
       },
     );
-    req.setTimeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS, () => {
-      req.destroy(
-        new Error(`request timed out after ${options.timeoutMs ?? DEFAULT_TIMEOUT_MS}ms`),
-      );
+    req.setTimeout(timeoutMs, () => {
+      req.destroy(new NavTransportError(`eNyugta request timed out after ${timeoutMs}ms`));
     });
     req.on('error', (cause) =>
       reject(new NavTransportError(`eNyugta request failed: ${cause.message}`)),
