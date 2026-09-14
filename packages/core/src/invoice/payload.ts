@@ -87,7 +87,10 @@ export function decodeToXml(base64: string, options: DecodeOptions = {}): string
   if (!compressed) return bytes.toString('utf8');
 
   try {
-    return gunzipSync(bytes).toString('utf8');
+    // Cap the output: a tiny payload can decompress to gigabytes (a
+    // decompression bomb). 64 MiB is well above any real NAV invoice batch;
+    // past it, gunzipSync throws (caught below as DECOMPRESSION_FAILED).
+    return gunzipSync(bytes, { maxOutputLength: 64 * 1024 * 1024 }).toString('utf8');
   } catch (cause) {
     throw new NavValidationError('Could not decompress payload', [
       {

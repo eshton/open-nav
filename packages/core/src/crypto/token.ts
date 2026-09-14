@@ -64,7 +64,12 @@ export function decodeExchangeToken(encodedToken: string, exchangeKey: string): 
 
   const plaintext = getCryptoProvider().aes128EcbDecrypt(ciphertext, keyBytes);
 
-  return decoder.decode(stripPkcs7(plaintext));
+  // A single 16-byte block is NAV's unpadded token: PKCS#7 padding would have
+  // added a whole extra block, so anything padded is > 16 bytes. Only then do we
+  // strip, so a 16-byte token that happens to end in a padding-looking byte is
+  // left intact.
+  const unpadded = ciphertext.length > 16 ? stripPkcs7(plaintext) : plaintext;
+  return decoder.decode(unpadded);
 }
 
 /**

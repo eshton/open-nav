@@ -530,11 +530,13 @@ function formatPrimitive(
 
     case 'integer':
       if (typeof value === 'number') {
-        if (!Number.isInteger(value)) {
+        // Safe-integer only: a larger magnitude renders in exponential notation
+        // (`1e+21`), which is not a valid xs:integer — pass it as a string.
+        if (!Number.isSafeInteger(value)) {
           issues.push({
             path,
             code: 'EXPECTED_INTEGER',
-            message: `expected an integer, got ${value}`,
+            message: `expected a safe integer, got ${value}`,
           });
           return '';
         }
@@ -552,7 +554,20 @@ function formatPrimitive(
       // Strings are the intended representation: they survive 18 significant
       // digits and rates like 0.27 without a floating point detour.
       if (typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value)) return value;
-      if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        const text = String(value);
+        // Exponential notation (`1e-7`, `1e21`) is not a valid xs:decimal; the
+        // caller must pass such a value as a string to keep it exact.
+        if (/[eE]/.test(text)) {
+          issues.push({
+            path,
+            code: 'EXPECTED_DECIMAL',
+            message: `number ${text} renders in exponential notation; pass it as a string`,
+          });
+          return '';
+        }
+        return text;
+      }
       issues.push({
         path,
         code: 'EXPECTED_DECIMAL',
@@ -561,7 +576,19 @@ function formatPrimitive(
       return '';
 
     default:
-      if (typeof value === 'string') return value;
+      if (typeof value === 'string') {
+        // XML 1.0 forbids most C0 control characters (tab/newline/CR aside);
+        // emitting them raw produces a payload NAV's parser rejects.
+        if (ILLEGAL_XML_CHARS.test(value)) {
+          issues.push({
+            path,
+            code: 'INVALID_XML_CHARACTER',
+            message: 'contains a control character not allowed in XML',
+          });
+          return '';
+        }
+        return value;
+      }
       if (typeof value === 'number' || typeof value === 'boolean') return String(value);
       issues.push({
         path,
@@ -571,6 +598,9 @@ function formatPrimitive(
       return '';
   }
 }
+
+// C0 controls disallowed by XML 1.0, except tab (09), newline (0A) and CR (0D).
+const ILLEGAL_XML_CHARS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/;
 
 function describe(value: unknown): string {
   if (value === null) return 'null';
