@@ -1,6 +1,6 @@
 {
   "name": "open-nav",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "description": "Open source libraries and tools for the Hungarian Tax Authority (NAV) Online Számla API",
   "license": "MIT",

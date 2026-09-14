@@ -1,6 +1,6 @@
 {
   "name": "@open-nav/mock-server",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "A local stand-in for the NAV Online Számla invoice service, for testing without credentials",
   "keywords": [
     "nav",
