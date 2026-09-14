@@ -55,7 +55,7 @@ describe('ReceiptClient', () => {
       signingKeyPem: keys.privateKey,
     });
 
-    expect(calls[0]!.url).toBe('https://data.example/document');
+    expect(calls[0]!.url).toBe('https://data.example/eReceiptMgmt/v1/document');
     const req = parseDocument(calls[0]!.body).value as {
       APNumber: string;
       documentClass: string;
@@ -76,7 +76,7 @@ describe('ReceiptClient', () => {
     const { fetch, calls } = stub();
     await client(fetch).hello({ currentOperatorSiteProcessId: 'PROC-1' });
 
-    expect(calls[0]!.url).toBe('https://data.example/hello');
+    expect(calls[0]!.url).toBe('https://data.example/eReceiptMgmt/v1/hello');
     const req = parseDocument(calls[0]!.body).value as {
       APNumber: string;
       currentOperatorSiteProcessId: string;
@@ -89,7 +89,7 @@ describe('ReceiptClient', () => {
     const { fetch, calls } = stub();
     await client(fetch).queryTaxpayer('12345678');
 
-    expect(calls[0]!.url).toBe('https://data.example/queryTaxpayer');
+    expect(calls[0]!.url).toBe('https://data.example/eReceiptMgmt/v1/queryTaxpayer');
     const req = parseDocument(calls[0]!.body).value as { APNumber: string; taxNumber: string };
     expect(req.APNumber).toBe('AP12345678');
     expect(req.taxNumber).toBe('12345678');
@@ -99,7 +99,7 @@ describe('ReceiptClient', () => {
     const { fetch, calls } = stub();
     await client(fetch).getProductByCode('01012100');
 
-    expect(calls[0]!.url).toBe('https://data.example/getProductByCode');
+    expect(calls[0]!.url).toBe('https://data.example/eReceiptMgmt/v1/getProductByCode');
     const req = parseDocument(calls[0]!.body).value as { productCode: string };
     expect(req.productCode).toBe('01012100');
   });

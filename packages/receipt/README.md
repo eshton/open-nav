@@ -13,11 +13,15 @@ Generated types and serialisation metadata come from the vendored
 vendored under NAV's evident org-wide MIT intent, though the upstream repository
 states no licence (see `schemas/NOTICE.md`).
 
-> **Private / work in progress.** The wire endpoints (host and per-operation
-> paths) are not in the published spec PDF — they live in NAV's apidog — so base
-> URLs and paths are configurable and documented as best-effort, to be pinned
-> against the live test system. Live smoke and the customer-key ECC wrapping are
-> still open (ONAV-37 backlog).
+> **Private / work in progress.** The endpoints are pinned from NAV's apidog
+> collection (the **hardware** e-cash-register interface): the test ("BV") hosts
+> are `navi-bv.enyugta.nav.gov.hu` (registration, unsecured) and
+> `navi-bv-sec.enyugta.nav.gov.hu` (data services, mutual TLS); production drops
+> the `-bv` suffix (to confirm on the live system). Everything here is still
+> unverified against a live register — that needs an e-cash-register AP number —
+> and the customer-key ECC wrapping is still open (ONAV-37 backlog). The cloud
+> (FAM) register at `fam.enyugta.nav.gov.hu` is a separate REST API, not this
+> XML/XSD interface.
 
 ## The two phases
 
@@ -48,7 +52,7 @@ const registration = new ReceiptRegistrationClient({
     softwareHash: '…',
     softwareLastUpdateTime: '2026-01-01T00:00:00Z',
   },
-  baseUrl: 'https://fam.enyugta.nav.gov.hu', // confirm against the test system
+  baseUrl: 'https://navi-bv.enyugta.nav.gov.hu/eReceiptMgmt/v1', // test (BV) registration host
 });
 
 const { response, authentication, signing } = await registration.register({
@@ -81,7 +85,7 @@ import { ReceiptClient } from '@open-nav/receipt';
 const client = new ReceiptClient({
   apNumber: 'AP12345678',
   clientCertificate: { cert: authCertPem, key: authKeyPem }, // mutual TLS
-  baseUrl: 'https://lekerdezo.enyugta.nav.gov.hu', // confirm against the test system
+  baseUrl: 'https://navi-bv-sec.enyugta.nav.gov.hu', // test (BV) secured data host
 });
 
 await client.hello({ currentOperatorSiteProcessId: operatorSiteProcessId });
