@@ -72,6 +72,63 @@ describe('ReceiptClient', () => {
     expect(opened.customer).toBe(canonicalize(customer));
   });
 
+  it('carries the optional fields and submits a report to the report endpoint', async () => {
+    const { fetch, calls } = stub();
+    await client(fetch).submitReport({
+      taxNumber: '12345678',
+      groupIdentificationNumber: '99999999',
+      reportClass: 'CASHREGISTER',
+      searchKey: 'SK-2',
+      searchKeyTimestamp: '2026-05-15T10:00:00Z',
+      recordCounter: 3,
+      lastRecordCounter: 2,
+      ntcaVerificationCode: 'CODE2',
+      qRCodeExpired: true,
+      offlineCreated: true,
+      cashRegisterSignCertificate: 'BASE64DER',
+      sendMissingDocumentProcessId: 'PROC-MISSING',
+      coreReportXml: '<CoreReport><t>1</t></CoreReport>',
+      customerReportXml: '<CustomerReport><b>y</b></CustomerReport>',
+      signingKeyPem: keys.privateKey,
+    });
+    expect(calls[0]!.url).toBe('https://data.example/eReceipt/v1/report');
+    const req = parseDocument(calls[0]!.body).value as {
+      groupIdentificationNumber: string;
+      sendMissingDocumentProcessId: string;
+      reportEnvelope: SignedDocumentEnvelopeType;
+    };
+    expect(req.groupIdentificationNumber).toBe('99999999');
+    expect(req.sendMissingDocumentProcessId).toBe('PROC-MISSING');
+    // A report with customer data carries both envelope payloads.
+    expect(req.reportEnvelope.customerEnvelopeData).toBeDefined();
+  });
+
+  it('passes optional hello process ids through', async () => {
+    const { fetch, calls } = stub();
+    await client(fetch).hello({
+      currentOperatorSiteProcessId: 'PROC-1',
+      currentVatProcessId: 'VAT-1',
+      currentAeBlockUnblockStateProcessId: 'AE-1',
+    });
+    const req = parseDocument(calls[0]!.body).value as {
+      currentVatProcessId: string;
+      currentAeBlockUnblockStateProcessId: string;
+    };
+    expect(req.currentVatProcessId).toBe('VAT-1');
+    expect(req.currentAeBlockUnblockStateProcessId).toBe('AE-1');
+  });
+
+  it('honours an endpoints override', async () => {
+    const { fetch, calls } = stub();
+    const c = new ReceiptClient({
+      apNumber: 'AP1',
+      transport: { fetch },
+      endpoints: { hello: 'https://override.example/hello' },
+    });
+    await c.hello({ currentOperatorSiteProcessId: 'P' });
+    expect(calls[0]!.url).toBe('https://override.example/hello');
+  });
+
   it('sends Hello to the hello endpoint with the AP number', async () => {
     const { fetch, calls } = stub();
     await client(fetch).hello({ currentOperatorSiteProcessId: 'PROC-1' });
