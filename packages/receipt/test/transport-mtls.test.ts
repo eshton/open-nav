@@ -41,7 +41,9 @@ let mode: 'ok' | 'error' | 'hang' = 'ok';
 
 beforeAll(async () => {
   httpServer = createServer(
-    { key: server.key, cert: server.cert, requestCert: true, rejectUnauthorized: false },
+    // Trust the self-signed client cert by passing it as the CA, so client-cert
+    // validation stays ON (rather than disabling it).
+    { key: server.key, cert: server.cert, requestCert: true, ca: [client.cert] },
     (req, res) => {
       req.on('data', () => {});
       req.on('end', () => {
