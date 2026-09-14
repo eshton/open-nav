@@ -134,6 +134,25 @@ that manages the certificate itself). NAV's error verdict (`funcCode === ERROR`)
 becomes a `NavApiError` carrying the fault code, so it reads as itself rather
 than as an opaque HTTP status.
 
+## Customer receipt (ECIES)
+
+Separate from the NAV submission: the customer's own copy of the receipt is
+encrypted to the customer's SECP256R1 public key (presented via QR) so only they
+can read it (§4.5). `encryptCustomerReceipt` runs the ECIES flow (ECDH → KDF2
+SHA-256 → AES-256-CBC → HMAC-SHA-256, compressed keys); `decryptCustomerReceipt`
+is the customer-app side.
+
+```ts
+import { encryptCustomerReceipt, decryptCustomerReceipt } from '@open-nav/receipt';
+
+const sealed = encryptCustomerReceipt(receiptXml, customerCompressedPublicKey);
+// … customer side …
+const xml = decryptCustomerReceipt(sealed, customerPrivateKey);
+```
+
+> Verified only by an in-process round trip — the KDF2 key-split order and MAC
+> encoding cannot be pinned to NAV's reference without an official test vector.
+
 ## Testing without certificates
 
 `createReceiptMock()` returns a `fetch` to hand to either client via
