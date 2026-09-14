@@ -1,4 +1,4 @@
-import { createRequestId, toHeaderTimestamp } from '@open-nav/core';
+import { createRequestId, toHeaderTimestamp, trimTrailingSlash } from '@open-nav/core';
 import { serializeDocument } from './codec.js';
 import { buildDocumentEnvelope, buildReportEnvelope } from './envelope.js';
 import {
@@ -280,8 +280,6 @@ export class ReceiptClient {
 
   private url(op: OperationKey): string {
     if (this.endpoints[op]) return this.endpoints[op]!;
-    let base = this.baseUrl;
-    while (base.endsWith('/')) base = base.slice(0, -1);
-    return `${base}/${DEFAULT_PATHS[op]}`;
+    return `${trimTrailingSlash(this.baseUrl)}/${DEFAULT_PATHS[op]}`;
   }
 }
