@@ -34,4 +34,11 @@ describe('canonicalize (Canonical XML 1.0)', () => {
     const sig = signEnvelope(a, privateKey);
     expect(verifyEnvelope(b, sig.envelopeSignature, publicKey)).toBe(true);
   });
+
+  it('throws on malformed XML instead of signing corrupt bytes', () => {
+    // The envelope signature is over the canonical bytes, so bad input must fail
+    // loudly here rather than produce something NAV rejects at verification.
+    expect(() => canonicalize('<r><unclosed></r>')).toThrow(/malformed|canonicalize/i);
+    expect(() => canonicalize('not xml at all')).toThrow(/canonicalize/i);
+  });
 });

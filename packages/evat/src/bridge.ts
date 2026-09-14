@@ -155,5 +155,12 @@ function formatTaxNumber(parts: {
   vatCode?: string;
   countyCode?: string;
 }): string {
-  return [parts.taxpayerId, parts.vatCode, parts.countyCode].filter(Boolean).join('-');
+  // Fixed 8-1-2 layout: the county code only follows a present VAT code, so a
+  // missing VAT code can't slide the county code into the VAT-code slot.
+  let formatted = parts.taxpayerId;
+  if (parts.vatCode) {
+    formatted += `-${parts.vatCode}`;
+    if (parts.countyCode) formatted += `-${parts.countyCode}`;
+  }
+  return formatted;
 }

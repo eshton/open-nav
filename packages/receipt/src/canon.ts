@@ -13,15 +13,27 @@ import { C14nCanonicalization } from 'xml-crypto';
  * comments are dropped.
  */
 
-const parser = new DOMParser();
 const canonicalizer = new C14nCanonicalization();
 
 /**
  * Canonicalise an XML document (e.g. a `CoreDocument` / `CoreReport`) to its
  * RFC 3076 canonical form, returning the exact bytes to compress and sign.
+ *
+ * The envelope signature is computed over these bytes, so malformed input must
+ * fail loudly here rather than silently produce bytes NAV rejects at signature
+ * verification: `@xmldom/xmldom` does not throw on parse errors by default, so
+ * an `errorHandler` is installed and a missing root element is rejected.
  */
 export function canonicalize(xml: string): string {
+  const parser = new DOMParser({
+    errorHandler: (level: string, message: string) => {
+      if (level !== 'warning') throw new Error(`cannot canonicalize malformed XML: ${message}`);
+    },
+  });
   const document = parser.parseFromString(xml, 'text/xml');
+  if (!document.documentElement) {
+    throw new Error('cannot canonicalize XML: no root element');
+  }
   const root = document.documentElement as unknown as Parameters<typeof canonicalizer.process>[0];
   return canonicalizer.process(root, {}) as string;
 }

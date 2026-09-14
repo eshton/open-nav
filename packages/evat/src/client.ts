@@ -243,7 +243,6 @@ export class EvatClient {
     return this.execute('queryDeclarationList', 'QueryDeclarationListRequest', range);
   }
 
-  /** NAV's compiled VAT-return (BEVFELD) data for a processed declaration. */
   /**
    * NAV's compiled VAT-return (BEVFELD) data for a processed declaration.
    *

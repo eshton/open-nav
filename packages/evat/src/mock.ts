@@ -8,9 +8,9 @@ import type { EvatCredentials } from './credentials.js';
  * It returns a `fetch` implementation to hand to {@link EvatClient} via
  * `transport.fetch`, so a whole integration — upload, gzipped partitions,
  * finalize, status polling, submission and the read-only queries — can run
- * without a technical user. It verifies the request signature the way NAV does
- * and drives the declaration through RECEIVED → FINISHED so a client's polling
- * loop is exercised.
+ * without a technical user. It checks the technical-user login (not the full
+ * signature) and drives the declaration through RECEIVED → FINISHED so a
+ * client's polling loop is exercised.
  *
  * A fetch-level mock (rather than a real HTTP server like @open-nav/mock-server)
  * is deliberate: the multipart uploads arrive as a `FormData` object here, so
