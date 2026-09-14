@@ -1,6 +1,8 @@
+import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { requestSignature, sha3_512Bytes, NavApiError, type SoftwareType } from '@open-nav/core';
 import { EvatClient, splitPartitions, VAT_DECLARATION } from '../src/client.js';
+import { decodeDownloadPayload } from '../src/transport.js';
 import { serializeDocument, parseDocument } from '../src/codec.js';
 import type { EvatCredentials } from '../src/credentials.js';
 
@@ -192,6 +194,28 @@ describe('EvatClient queries', () => {
     const download = await client(fetch).queryDeclarationData('PROC-9');
     expect(download.root).toBe('QueryDeclarationDataResponse');
     expect(download.payload).toEqual(payload);
+  });
+
+  it('reads the compiled VAT data from the gzipped `file` part and decodes it', async () => {
+    const declarationXml = '<VatDeclarationData>…</VatDeclarationData>';
+    const gz = gzipSync(Buffer.from(declarationXml, 'utf8'));
+    const responseXml = serializeDocument('QueryVatDeclarationDataResponse', {
+      header: { requestId: 'R', timestamp: '2026-05-15T10:20:30.000Z', requestVersion: '1.0' },
+      result: { funcCode: 'OK' },
+    });
+    const fetch = (async () => {
+      // NAV's real shape: a `body` XML part and a `file` octet-stream part with
+      // no filename, carrying gzip bytes.
+      const form = new FormData();
+      form.append('body', new Blob([responseXml], { type: 'application/xml' }));
+      form.append('file', new Blob([gz], { type: 'application/octet-stream' }));
+      return new Response(form, { status: 200 });
+    }) as unknown as typeof globalThis.fetch;
+
+    const download = await client(fetch).queryVatDeclarationData('PROC-9');
+    expect(download.root).toBe('QueryVatDeclarationDataResponse');
+    expect(new Uint8Array(download.payload!)).toEqual(new Uint8Array(gz));
+    expect(decodeDownloadPayload(download.payload!)).toBe(declarationXml);
   });
 });
 

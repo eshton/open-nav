@@ -1,3 +1,4 @@
+import { gzipSync } from 'node:zlib';
 import { parseDocument, serializeDocument } from './codec.js';
 import type { EvatCredentials } from './credentials.js';
 
@@ -29,6 +30,8 @@ export interface EvatMockOptions {
   }>;
   /** Payload returned as the octet-stream part of queryDeclarationData. */
   declarationDataPayload?: Uint8Array;
+  /** Raw XML bytes the mock gzips into the queryVatDeclarationData `file` part. */
+  vatDeclarationPayload?: Uint8Array;
 }
 
 interface UploadState {
@@ -203,28 +206,24 @@ function handle(
         result: { funcCode: 'OK' },
       });
 
-    case 'queryDeclarationData': {
-      const form = new FormData();
-      form.append(
-        'response',
-        new Blob(
-          [
-            serializeDocument('QueryDeclarationDataResponse', {
-              header: OK_HEADER,
-              result: { funcCode: 'OK' },
-            }),
-          ],
-          { type: 'application/xml' },
-        ),
-      );
-      form.append(
-        'data',
-        new Blob([options.declarationDataPayload ?? new Uint8Array()], {
-          type: 'application/octet-stream',
+    case 'queryDeclarationData':
+      return downloadForm(
+        serializeDocument('QueryDeclarationDataResponse', {
+          header: OK_HEADER,
+          result: { funcCode: 'OK' },
         }),
+        options.declarationDataPayload ?? new Uint8Array(),
       );
-      return form;
-    }
+
+    case 'queryVatDeclarationData':
+      // NAV gzips the compiled-return payload into the octet-stream `file` part.
+      return downloadForm(
+        serializeDocument('QueryVatDeclarationDataResponse', {
+          header: OK_HEADER,
+          result: { funcCode: 'OK' },
+        }),
+        gzipSync(Buffer.from(options.vatDeclarationPayload ?? new Uint8Array())),
+      );
 
     default:
       throw new Error(`unknown operation ${operation}`);
@@ -259,4 +258,17 @@ function xmlResponse(body: string): Response {
     status: 200,
     headers: { 'content-type': 'application/xml' },
   });
+}
+
+/**
+ * Build a data-download response the way NAV does: multipart/form-data with a
+ * `body` XML part and a `file` octet-stream part carrying the payload bytes. The
+ * `file` part deliberately has no filename, matching NAV — the case that breaks
+ * a naive `response.formData()` read.
+ */
+function downloadForm(xml: string, payload: Uint8Array): FormData {
+  const form = new FormData();
+  form.append('body', new Blob([xml], { type: 'application/xml' }));
+  form.append('file', new Blob([payload], { type: 'application/octet-stream' }));
+  return form;
 }
