@@ -29,6 +29,18 @@ jobs:
         with:
           python-version: '3.12'
 
+      # Node + the workspace Prettier: generate_tax_codes.py --check formats its
+      # output through Prettier before comparing (the committed file is
+      # formatted), so a formatting-only difference does not read as drift.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.x'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
       - name: Install openpyxl for the tax-code catalogue check
         run: python3 -m pip install --quiet openpyxl
 

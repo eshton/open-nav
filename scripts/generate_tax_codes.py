@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import subprocess
 import sys
 
 import openpyxl
@@ -148,12 +149,28 @@ def render(rows: list[dict[str, str]]) -> str:
     return '\n'.join(lines)
 
 
+def prettier(source: str) -> str:
+    """Format the generated TypeScript with the repo's Prettier.
+
+    The committed file is Prettier-formatted (as all source is), so the check
+    must compare against the same — otherwise a formatting-only difference reads
+    as stale. Requires Node/Prettier on PATH (the repo's dev/CI environment).
+    """
+    result = subprocess.run(
+        ['npx', 'prettier', '--stdin-filepath', OUT],
+        input=source, capture_output=True, text=True, cwd=ROOT,
+    )
+    if result.returncode != 0:
+        raise SystemExit(f'prettier failed: {result.stderr.strip()}')
+    return result.stdout
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
 
-    generated = render(read_rows())
+    generated = prettier(render(read_rows()))
     if args.check:
         current = open(OUT, encoding='utf-8').read() if os.path.exists(OUT) else ''
         if current.strip() != generated.strip():
