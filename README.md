@@ -80,20 +80,21 @@ A library should absorb all four. That is the entire premise of this project.
 
 ## Layout
 
-| Path                   | What it is                                                             |
-| ---------------------- | ---------------------------------------------------------------------- |
-| `packages/core`        | Types, crypto, XML, payload encoding, exact decimals, validation       |
-| `packages/client`      | Client for all ten service operations, plus transaction polling        |
-| `packages/invoicing`   | Printable invoice documents and the NGM data export                    |
-| `packages/mock-server` | A local stand-in for the service, for testing without credentials      |
-| `packages/cli`         | `open-nav` command line tool, built for scripts and agents             |
-| `packages/mcp`         | MCP server, so an AI agent can use all of the above                    |
-| `packages/evat`        | Client for NAV's eÁFA (eVAT) VAT-return M2M interface                  |
-| `packages/receipt`     | Client for NAV's eNyugta (e-cash-register) M2M interface (WIP)         |
-| `packages/codegen`     | Generates the types, schema metadata and fault catalogue from the XSDs |
-| `schemas/`             | Official NAV XSDs and message catalogues, vendored verbatim            |
-| `conformance/`         | NAV's own 41 sample documents, used as the golden test corpus          |
-| `scripts/`             | Schema vendoring, drift detection, packaging and release               |
+| Path                   | What it is                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------- |
+| `packages/core`        | Types, crypto, XML, payload encoding, exact decimals, validation                                  |
+| `packages/client`      | Client for all ten service operations, plus transaction polling                                   |
+| `packages/invoicing`   | Printable invoice documents and the NGM data export                                               |
+| `packages/mock-server` | A local stand-in for the service, for testing without credentials                                 |
+| `packages/cli`         | `open-nav` command line tool, built for scripts and agents                                        |
+| `packages/mcp`         | MCP server, so an AI agent can use all of the above                                               |
+| `packages/evat`        | Client for NAV's eÁFA (eVAT) VAT-return M2M interface                                             |
+| `packages/receipt`     | Client for NAV's eNyugta (e-cash-register) M2M interface (WIP)                                    |
+| `packages/codegen`     | Generates the types, schema metadata and fault catalogue from the XSDs                            |
+| `schemas/`             | Official NAV XSDs and message catalogues, vendored verbatim                                       |
+| `conformance/`         | NAV's own 41 sample documents, used as the golden test corpus                                     |
+| `scripts/`             | Schema vendoring, drift detection, packaging and release                                          |
+| `docs/`                | Background notes, e.g. [`enyugta.md`](docs/enyugta.md) (how eNyugta works + the rollout timeline) |
 
 Every package listed above is implemented. What is deliberately absent is
 covered under [Scope](#scope).
