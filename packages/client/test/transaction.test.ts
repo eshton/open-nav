@@ -1,7 +1,7 @@
 import { NavInvoiceRejectedError, NavTransportError } from '@open-nav/core';
 import { describe, expect, it } from 'vitest';
 import { NavClient } from '../src/client.js';
-import { waitForTransaction } from '../src/transaction.js';
+import { listTransactions, waitForTransaction } from '../src/transaction.js';
 import { CREDENTIALS, SOFTWARE, stubFetch, transactionStatusResponse } from './support.js';
 
 /** Sleeps are injected, so these tests are instant and deterministic. */
@@ -143,5 +143,55 @@ describe('waitForTransaction', () => {
     await expect(
       waitForTransaction(client, 'TX1', { sleep: noSleep, timeoutMs: 0 }),
     ).rejects.toThrowError(/#1 PROCESSING/);
+  });
+});
+
+describe('listTransactions', () => {
+  function fakeClient(pages: Array<Record<string, unknown>>) {
+    const calls: Array<{ page: number; insDate: { dateTimeFrom: string; dateTimeTo: string } }> =
+      [];
+    const client = {
+      async queryTransactionList(body: {
+        page: number;
+        insDate: { dateTimeFrom: string; dateTimeTo: string };
+      }) {
+        calls.push(body);
+        return { transactionListResult: pages[body.page - 1] };
+      },
+    } as unknown as NavClient;
+    return { client, calls };
+  }
+
+  it('covers the Hungarian local day (DST-aware) as UTC instants', async () => {
+    const { client, calls } = fakeClient([{ currentPage: 1, availablePage: 1, transaction: [] }]);
+    await listTransactions(client, { from: '2026-08-03', to: '2026-08-03' });
+    // Start at earliest local midnight (CEST +02) → prev day 22:00Z; end at latest
+    // local end-of-day (CET +01) → 22:59:59.999Z. Covers the day in both DST states.
+    expect(calls[0]!.insDate.dateTimeFrom).toBe('2026-08-02T22:00:00.000Z');
+    expect(calls[0]!.insDate.dateTimeTo).toBe('2026-08-03T22:59:59.999Z');
+  });
+
+  it('walks every page and returns newest first', async () => {
+    const { client, calls } = fakeClient([
+      {
+        currentPage: 1,
+        availablePage: 2,
+        transaction: [{ insDate: '2026-08-03T10:00:00Z', transactionId: 'a' }],
+      },
+      {
+        currentPage: 2,
+        availablePage: 2,
+        transaction: [{ insDate: '2026-08-03T12:00:00Z', transactionId: 'b' }],
+      },
+    ]);
+    const out = await listTransactions(client, { from: '2026-08-03', to: '2026-08-03' });
+    expect(out.map((t) => t.transactionId)).toEqual(['b', 'a']);
+    expect(calls.map((c) => c.page)).toEqual([1, 2]);
+  });
+
+  it('stops rather than spinning when currentPage is missing', async () => {
+    const { client, calls } = fakeClient([{ availablePage: 5, transaction: [] }]);
+    await listTransactions(client, { from: '2026-08-01', to: '2026-08-31' });
+    expect(calls).toHaveLength(1);
   });
 });
