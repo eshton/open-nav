@@ -241,3 +241,20 @@ describe('EvatClient errors', () => {
     ).rejects.toBeInstanceOf(NavApiError);
   });
 });
+
+describe('decodeDownloadPayload decompression limit', () => {
+  it('refuses a decompression bomb rather than expanding it', () => {
+    // 300 MiB of zeros compresses to ~300 kB. Without a cap, a NAV download
+    // part of that size expands in full before anything gets to look at it;
+    // core's invoice payload decoder has always capped this, and the eVAT
+    // download path is the same exposure.
+    const bomb = new Uint8Array(gzipSync(Buffer.alloc(300 * 1024 * 1024, 0)));
+    expect(bomb.length).toBeLessThan(1024 * 1024);
+    expect(() => decodeDownloadPayload(bomb)).toThrow(/larger than|maxOutputLength/i);
+  });
+
+  it('still decodes a payload of a sane size', () => {
+    const payload = new Uint8Array(gzipSync(Buffer.from('<Declaration/>', 'utf8')));
+    expect(decodeDownloadPayload(payload)).toBe('<Declaration/>');
+  });
+});

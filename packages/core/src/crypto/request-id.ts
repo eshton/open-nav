@@ -53,11 +53,24 @@ function assertRequestIdChars(value: string, path: string): void {
   }
 }
 
+/**
+ * `length` characters drawn uniformly from {@link ALPHABET}.
+ *
+ * Rejection sampling rather than `byte % 62`: 256 is not a multiple of 62, so
+ * the modulo would make the first eight letters about 27% more likely than the
+ * rest, narrowing the space this identifier has to stay unique in. Bytes are
+ * drawn in batches so the common case is a single call to the provider.
+ */
 function randomChars(length: number): string {
-  const bytes = getCryptoProvider().randomBytes(length);
+  const limit = 256 - (256 % ALPHABET.length);
   let out = '';
-  for (let i = 0; i < length; i += 1) {
-    out += ALPHABET[bytes[i]! % ALPHABET.length];
+  while (out.length < length) {
+    const bytes = getCryptoProvider().randomBytes(length - out.length + 8);
+    for (const byte of bytes) {
+      if (byte >= limit) continue; // would bias the distribution; draw again
+      out += ALPHABET[byte % ALPHABET.length];
+      if (out.length === length) break;
+    }
   }
   return out;
 }

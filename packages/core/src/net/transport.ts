@@ -1,3 +1,4 @@
+import { MAX_RESPONSE_BYTES } from '../constants.js';
 import { NavApiError, NavTransportError } from '../errors.js';
 
 /**
@@ -90,6 +91,12 @@ export interface TimeoutFetchOptions {
  * `fetch` with an abort-based timeout, mapping failures to `NavTransportError`.
  * A timeout is reported distinctly from a network error so callers can retry
  * only on a timeout.
+ *
+ * The timer is disarmed as soon as the response headers arrive, so it does
+ * **not** bound reading the body. Prefer {@link fetchTextWithTimeout} or
+ * {@link fetchBytesWithTimeout}, which hold the deadline over the whole
+ * exchange; a server that sends headers and then stalls mid-body hangs this
+ * one forever.
  */
 export async function fetchWithTimeout(
   url: string,
@@ -111,6 +118,122 @@ export async function fetchWithTimeout(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** A response read to completion under one deadline. */
+export interface TimedResponse<TBody> {
+  body: TBody;
+  status: number;
+  headers: Headers;
+}
+
+/**
+ * `fetch` plus the body read, both under a single deadline.
+ *
+ * Arming the timer only around `fetch` leaves the body unbounded: a peer that
+ * sends its headers and then stops sending bytes never settles, and no
+ * `timeoutMs` the caller passes has any effect. Holding the deadline until the
+ * body is in hand is what makes the timeout mean what it says.
+ *
+ * The body is also capped at {@link MAX_RESPONSE_BYTES}, streamed so an
+ * oversized response is abandoned rather than buffered whole.
+ */
+async function fetchBodyWithTimeout<TBody>(
+  url: string,
+  init: RequestInit,
+  options: TimeoutFetchOptions,
+  read: (response: Response, label: string) => Promise<TBody>,
+): Promise<TimedResponse<TBody>> {
+  const doFetch = options.fetch ?? globalThis.fetch;
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const controller = new AbortController();
+  // A stalled body read is aborted by this same controller, but the rejection
+  // it produces is runtime specific (undici raises a plain `TypeError`), so
+  // the timeout is recognised from our own flag rather than from the error.
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  try {
+    const response = await doFetch(url, { ...init, signal: controller.signal });
+    return {
+      body: await read(response, options.label),
+      status: response.status,
+      headers: response.headers,
+    };
+  } catch (cause) {
+    if (cause instanceof NavTransportError) throw cause;
+    throw new NavTransportError(
+      timedOut
+        ? `${options.label} timed out after ${timeoutMs}ms`
+        : `${options.label} failed: ${(cause as Error).message}`,
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** {@link fetchBodyWithTimeout}, reading the body as text. */
+export function fetchTextWithTimeout(
+  url: string,
+  init: RequestInit,
+  options: TimeoutFetchOptions,
+): Promise<TimedResponse<string>> {
+  return fetchBodyWithTimeout(url, init, options, async (response, label) =>
+    new TextDecoder().decode(await readCapped(response, label)),
+  );
+}
+
+/** {@link fetchBodyWithTimeout}, reading the body as bytes. */
+export function fetchBytesWithTimeout(
+  url: string,
+  init: RequestInit,
+  options: TimeoutFetchOptions,
+): Promise<TimedResponse<Uint8Array>> {
+  return fetchBodyWithTimeout(url, init, options, readCapped);
+}
+
+/**
+ * Read a response body, refusing one larger than {@link MAX_RESPONSE_BYTES}.
+ *
+ * Streamed where the runtime exposes `response.body`, so the limit is enforced
+ * as the bytes arrive instead of after they have all been buffered. A response
+ * without a readable stream (an empty body, or a hand-built stub) falls back to
+ * `arrayBuffer()`, which is then checked the same way.
+ */
+async function readCapped(response: Response, label: string): Promise<Uint8Array> {
+  const tooLarge = (): NavTransportError =>
+    new NavTransportError(`${label} response exceeded the ${MAX_RESPONSE_BYTES} byte limit`);
+
+  const stream = response.body;
+  if (!stream) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.length > MAX_RESPONSE_BYTES) throw tooLarge();
+    return bytes;
+  }
+
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_RESPONSE_BYTES) {
+      await reader.cancel().catch(() => undefined);
+      throw tooLarge();
+    }
+    chunks.push(value);
+  }
+
+  const body = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return body;
 }
 
 /** Strip trailing slashes from a base URL (ReDoS-safe, no regex). */

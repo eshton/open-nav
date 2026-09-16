@@ -1,8 +1,9 @@
 import { request as httpsRequest } from 'node:https';
 import {
   DEFAULT_TIMEOUT_MS,
-  fetchWithTimeout,
+  fetchTextWithTimeout,
   interpretNavResponse,
+  MAX_RESPONSE_BYTES,
   NavApiError,
   NavTransportError,
   type NavHttpResponse,
@@ -58,12 +59,12 @@ export async function postReceiptXml(
   xml: string,
   options: ReceiptTransportOptions = {},
 ): Promise<ReceiptResponse> {
-  const response = await fetchWithTimeout(
+  const response = await fetchTextWithTimeout(
     url,
     { method: 'POST', headers: { ...XML_HEADERS, ...options.headers }, body: xml },
     { fetch: options.fetch, timeoutMs: options.timeoutMs, label: LABEL },
   );
-  return interpretNavResponse(await response.text(), response.status, { label: LABEL, parse });
+  return interpretNavResponse(response.body, response.status, { label: LABEL, parse });
 }
 
 /**
@@ -114,7 +115,23 @@ function postWithClientCertificate(
       },
       (res) => {
         const chunks: Buffer[] = [];
-        res.on('data', (chunk: Buffer) => chunks.push(chunk));
+        let received = 0;
+        res.on('data', (chunk: Buffer) => {
+          received += chunk.length;
+          // Bounded, like every other NAV response read: an endpoint that
+          // streams without end would otherwise grow this buffer until the
+          // process dies.
+          if (received > MAX_RESPONSE_BYTES) {
+            res.destroy();
+            reject(
+              new NavTransportError(
+                `eNyugta response exceeded the ${MAX_RESPONSE_BYTES} byte limit`,
+              ),
+            );
+            return;
+          }
+          chunks.push(chunk);
+        });
         res.on('end', () =>
           resolve({ body: Buffer.concat(chunks).toString('utf8'), status: res.statusCode ?? 0 }),
         );
@@ -144,16 +161,22 @@ export async function downloadCertificate(
   url: string,
   options: ReceiptTransportOptions & { waitMs?: number } = {},
 ): Promise<string> {
-  const doFetch = options.fetch ?? globalThis.fetch;
   const waitMs = options.waitMs ?? 5000;
   if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
 
-  const response = await doFetch(url, { method: 'GET', headers: options.headers ?? {} });
-  if (!response.ok) {
+  // Through the shared helper rather than a bare fetch: this URL comes out of a
+  // NAV response, and without a deadline an endpoint that never answers hangs
+  // the registration for good.
+  const response = await fetchTextWithTimeout(
+    url,
+    { method: 'GET', headers: options.headers ?? {} },
+    { fetch: options.fetch, timeoutMs: options.timeoutMs, label: 'eNyugta certificate download' },
+  );
+  if (response.status < 200 || response.status >= 300) {
     throw new NavApiError({
       message: `certificate not available yet (HTTP ${response.status})`,
       status: response.status,
     });
   }
-  return response.text();
+  return response.body;
 }

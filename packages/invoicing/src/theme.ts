@@ -53,7 +53,14 @@ export interface InvoiceTheme {
   /** Show the "rendered from reported data" note. Defaults to true. */
   provenanceNote?: boolean;
 
-  /** Appended verbatim after the generated stylesheet. The escape hatch. */
+  /**
+   * Appended verbatim after the generated stylesheet. The escape hatch.
+   *
+   * CSS only: it lands inside the document's `<style>` element, so a `</style>`
+   * in it would end the stylesheet and turn the rest into markup. That is
+   * rejected rather than emitted — a theme is configuration, and a theme file
+   * can come from somewhere the document's reader does not control.
+   */
   customCss?: string;
 }
 
@@ -146,6 +153,14 @@ export function resolveTheme(theme: InvoiceTheme = {}): ResolvedTheme {
     throw new ThemeError(
       `theme.template: ${JSON.stringify(merged.template)} is not a template. ` +
         `Use "standard" or "compact".`,
+    );
+  }
+
+  if (merged.customCss !== undefined && /<\/\s*style/i.test(merged.customCss)) {
+    throw new ThemeError(
+      'theme.customCss must not contain "</style>": it is appended inside the ' +
+        "document's stylesheet, and closing that element would let the rest of the " +
+        'value be parsed as markup rather than as CSS.',
     );
   }
 

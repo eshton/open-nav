@@ -243,3 +243,24 @@ describe('a themed document', () => {
     }
   });
 });
+
+describe('customCss containment', () => {
+  it('rejects a value that closes the stylesheet', () => {
+    // customCss is appended inside the document's <style> element, so a
+    // closing tag ends the stylesheet and everything after it is parsed as
+    // markup — the one way an otherwise validated theme reaches the document
+    // as something other than CSS.
+    expect(() => resolveTheme({ customCss: '</style><script>alert(1)</script>' })).toThrow(
+      ThemeError,
+    );
+    expect(() => resolveTheme({ customCss: 'a{}</ style ><img src=x onerror=y>' })).toThrow(
+      ThemeError,
+    );
+    expect(() => resolveTheme({ customCss: 'A{}</STYLE>' })).toThrow(ThemeError);
+  });
+
+  it('still allows ordinary custom CSS through', () => {
+    const theme = resolveTheme({ customCss: '.totals td { font-weight: 400; }' });
+    expect(buildStyles(theme)).toContain('.totals td { font-weight: 400; }');
+  });
+});

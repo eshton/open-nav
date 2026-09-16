@@ -1,4 +1,5 @@
 import { gunzipSync, gzipSync } from 'node:zlib';
+import { MAX_DECOMPRESSED_BYTES } from '../constants.js';
 import { NavValidationError } from '../errors.js';
 import type { InvoiceAnnulment, InvoiceData } from '../generated/types.js';
 import { parseDocumentAs } from '../xml/read.js';
@@ -88,9 +89,9 @@ export function decodeToXml(base64: string, options: DecodeOptions = {}): string
 
   try {
     // Cap the output: a tiny payload can decompress to gigabytes (a
-    // decompression bomb). 64 MiB is well above any real NAV invoice batch;
+    // decompression bomb). The cap is well above any real NAV invoice batch;
     // past it, gunzipSync throws (caught below as DECOMPRESSION_FAILED).
-    return gunzipSync(bytes, { maxOutputLength: 64 * 1024 * 1024 }).toString('utf8');
+    return gunzipSync(bytes, { maxOutputLength: MAX_DECOMPRESSED_BYTES }).toString('utf8');
   } catch (cause) {
     throw new NavValidationError('Could not decompress payload', [
       {

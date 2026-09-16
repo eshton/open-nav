@@ -1,4 +1,5 @@
 import { gunzipSync, gzipSync } from 'node:zlib';
+import { MAX_DECOMPRESSED_BYTES } from '@open-nav/core';
 import { canonicalize } from './canon.js';
 import {
   decryptDocument,
@@ -51,7 +52,11 @@ function unseal(payloadBase64: string, keyBase64: string): string {
     new Uint8Array(Buffer.from(payloadBase64, 'base64')),
     keyBase64,
   );
-  return gunzipSync(Buffer.from(compressed)).toString('utf8');
+  // Capped like every other decompression here: the ciphertext is whatever the
+  // peer sent, and a small gzip stream expands without bound.
+  return gunzipSync(Buffer.from(compressed), {
+    maxOutputLength: MAX_DECOMPRESSED_BYTES,
+  }).toString('utf8');
 }
 
 /**

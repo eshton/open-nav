@@ -155,6 +155,21 @@ function safeName(invoiceNumber: string): string {
   return cleaned === '' ? 'invoice' : cleaned;
 }
 
+/**
+ * The `yyyy-mm` directory an invoice is filed under.
+ *
+ * Every part of a path built from a response is checked, not just the invoice
+ * number: the issue date is a field on the wire like any other, and the codec
+ * does not enforce the schema's date pattern while parsing, so an endpoint
+ * that answered `../../..` would have the leading segments of the path written
+ * outside `--out`. Anything that is not a plain `yyyy-mm` is filed under
+ * `unknown-date` rather than trusted.
+ */
+export function monthDirectory(issueDate: string): string {
+  const month = issueDate.slice(0, 7);
+  return /^\d{4}-\d{2}$/.test(month) ? month : 'unknown-date';
+}
+
 /** Read an InvoiceData document, failing clearly if it is something else. */
 function readInvoice(path: string, context: CommandContext): InvoiceData {
   const parsed = parseDocument(readInput(path, context), { unknownElements: 'ignore' });
@@ -799,7 +814,7 @@ export const COMMANDS: CommandDefinition[] = [
         // unusable, and named so a re-run can skip what it already has.
         const relative = join(
           requested.toLowerCase(),
-          entry.digest.invoiceIssueDate.slice(0, 7),
+          monthDirectory(entry.digest.invoiceIssueDate),
           `${safeName(entry.digest.invoiceNumber)}.xml`,
         );
         const target = join(out, relative);

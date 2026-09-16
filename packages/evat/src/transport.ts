@@ -1,9 +1,11 @@
 import { gunzipSync } from 'node:zlib';
 import {
-  fetchWithTimeout,
+  fetchBytesWithTimeout,
+  fetchTextWithTimeout,
   firstBinaryPart,
   firstXmlPart,
   interpretNavResponse,
+  MAX_DECOMPRESSED_BYTES,
   NavTransportError,
   parseMultipart,
   trimTrailingSlash,
@@ -56,7 +58,7 @@ export async function postXml(
   options: EvatTransportOptions = {},
 ): Promise<EvatResponse> {
   const label = `eVAT ${operation}`;
-  const response = await fetchWithTimeout(
+  const response = await fetchTextWithTimeout(
     endpoint(baseUrl, operation),
     {
       method: 'POST',
@@ -65,7 +67,7 @@ export async function postXml(
     },
     { fetch: options.fetch, timeoutMs: options.timeoutMs, label },
   );
-  return interpretNavResponse(await response.text(), response.status, { label, parse });
+  return interpretNavResponse(response.body, response.status, { label, parse });
 }
 
 /**
@@ -89,7 +91,7 @@ export async function postMultipart(
     part.fileName ?? 'partition.bin',
   );
   // Let fetch set the multipart content-type with its boundary.
-  const response = await fetchWithTimeout(
+  const response = await fetchTextWithTimeout(
     endpoint(baseUrl, operation),
     {
       method: 'POST',
@@ -98,7 +100,7 @@ export async function postMultipart(
     },
     { fetch: options.fetch, timeoutMs: options.timeoutMs, label },
   );
-  return interpretNavResponse(await response.text(), response.status, { label, parse });
+  return interpretNavResponse(response.body, response.status, { label, parse });
 }
 
 /**
@@ -123,7 +125,7 @@ export async function postXmlForMultipart(
   options: EvatTransportOptions = {},
 ): Promise<EvatDownload> {
   const label = `eVAT ${operation}`;
-  const response = await fetchWithTimeout(
+  const response = await fetchBytesWithTimeout(
     endpoint(baseUrl, operation),
     {
       method: 'POST',
@@ -140,10 +142,13 @@ export async function postXmlForMultipart(
   const contentType = response.headers.get('content-type') ?? '';
   const boundary = /boundary=("?)([^";]+)\1/i.exec(contentType)?.[2];
   if (!contentType.includes('multipart/') || !boundary) {
-    return interpretNavResponse(await response.text(), response.status, { label, parse });
+    return interpretNavResponse(new TextDecoder().decode(response.body), response.status, {
+      label,
+      parse,
+    });
   }
 
-  const parts = parseMultipart(new Uint8Array(await response.arrayBuffer()), boundary);
+  const parts = parseMultipart(response.body, boundary);
   const xmlPart = parts.get('body') ?? firstXmlPart(parts);
   const payload = parts.get('file') ?? firstBinaryPart(parts);
   if (!xmlPart) {
@@ -162,7 +167,11 @@ export async function postXmlForMultipart(
  */
 export function decodeDownloadPayload(payload: Uint8Array): string {
   if (payload[0] === 0x1f && payload[1] === 0x8b) {
-    return gunzipSync(Buffer.from(payload)).toString('utf8');
+    // Capped: a few hundred kilobytes of gzip expands to hundreds of megabytes,
+    // and this payload comes off the wire. Past the cap gunzipSync throws.
+    return gunzipSync(Buffer.from(payload), {
+      maxOutputLength: MAX_DECOMPRESSED_BYTES,
+    }).toString('utf8');
   }
   return new TextDecoder().decode(payload);
 }

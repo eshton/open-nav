@@ -1,4 +1,5 @@
 import {
+  fetchTextWithTimeout,
   NavApiError,
   NavTransportError,
   parseDocument,
@@ -56,30 +57,32 @@ export async function postXml(
       retryAfterMs = undefined;
     }
 
-    let response: Response;
+    // The body is read under the same deadline as the request. Timing only the
+    // `fetch` bounds nothing useful: a peer that sends headers and then stalls
+    // mid-body never settles, and `timeoutMs` would have no effect at all.
+    let response: { body: string; status: number; headers: Headers };
     try {
-      response = await withTimeout(
-        (signal) =>
-          doFetch(url, {
-            method: 'POST',
-            body: xml,
-            signal,
-            headers: {
-              'content-type': 'application/xml; charset=utf-8',
-              accept: 'application/xml',
-              ...options.headers,
-            },
-          }),
-        timeoutMs,
+      response = await fetchTextWithTimeout(
+        url,
+        {
+          method: 'POST',
+          body: xml,
+          headers: {
+            'content-type': 'application/xml; charset=utf-8',
+            accept: 'application/xml',
+            ...options.headers,
+          },
+        },
+        { fetch: doFetch, timeoutMs, label: `${operation} request to NAV` },
       );
     } catch (cause) {
       lastError = new NavTransportError(`${operation} request to NAV failed`, { cause });
       continue;
     }
 
-    const body = await response.text();
+    const body = response.body;
 
-    if (response.ok) {
+    if (response.status >= 200 && response.status < 300) {
       return { ...parseResponseBody(body, response.status), status: response.status, body };
     }
 
@@ -171,19 +174,6 @@ function toApiError(body: string, status: number): NavApiError {
     validationMessages: value.technicalValidationMessages ?? [],
     responseBody: body,
   });
-}
-
-async function withTimeout<T>(
-  run: (signal: AbortSignal) => Promise<T>,
-  timeoutMs: number,
-): Promise<T> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await run(controller.signal);
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 function delay(ms: number): Promise<void> {

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { EXIT } from '../src/errors.js';
 import { discoverEnvFiles, parseEnvFile } from '../src/config.js';
+import { monthDirectory } from '../src/commands.js';
 import { run } from '../src/main.js';
 import type { Writer } from '../src/output.js';
 
@@ -628,4 +629,24 @@ describe('render engine selection', () => {
     const themed = await cli(['render', 'good.xml', '--pdf', 'a.pdf', '--theme', 'theme.json']);
     expect(plain.binary.get('a.pdf')?.length).not.toBe(themed.binary.get('a.pdf')?.length);
   }, 30_000);
+});
+
+describe('pull output paths', () => {
+  it('refuses to build a directory name out of an unvalidated issue date', () => {
+    // `pull` files invoices under `<out>/<direction>/<yyyy-mm>/`. The month
+    // comes from the digest NAV returned, and the codec does not enforce the
+    // schema's date pattern while parsing a response, so a hostile or
+    // compromised endpoint could put path segments there. Before the guard,
+    // `join('inbound', '../../.')` resolved to `..` and the invoice was
+    // written outside --out entirely.
+    expect(monthDirectory('2025-01-15')).toBe('2025-01');
+    expect(monthDirectory('../../../../etc/passwd')).toBe('unknown-date');
+    expect(monthDirectory('..')).toBe('unknown-date');
+    expect(monthDirectory('')).toBe('unknown-date');
+    expect(monthDirectory('2025-1-5')).toBe('unknown-date');
+
+    expect(join('inbound', monthDirectory('../../../../etc'), 'INV.xml')).toBe(
+      'inbound/unknown-date/INV.xml',
+    );
+  });
 });

@@ -72,6 +72,12 @@ export interface MockServer {
  * const client = new NavClient({ credentials, software, baseUrl: mock.url });
  * ```
  */
+/**
+ * Largest request body the mock accepts. Well past NAV's 100-invoice batch, and
+ * far enough below "unbounded" that a stray upload cannot exhaust memory.
+ */
+const MAX_REQUEST_BYTES = 32 * 1024 * 1024;
+
 export async function startMockServer(options: MockServerOptions): Promise<MockServer> {
   const state = createState(options.taxpayers ?? []);
   seedInbound(state, options.inboundInvoices ?? [], options.now ?? (() => new Date()));
@@ -86,8 +92,29 @@ export async function startMockServer(options: MockServerOptions): Promise<MockS
 
   const server = createServer((request, response) => {
     const chunks: Buffer[] = [];
-    request.on('data', (chunk: Buffer) => chunks.push(chunk));
+    let received = 0;
+
+    // A client that disconnects mid-request makes the stream emit `error`.
+    // Unhandled, that is an uncaught exception, which takes the whole mock
+    // down — and `open-nav-mock` is a long-running process, not just a
+    // per-test fixture.
+    request.on('error', () => {
+      response.destroy();
+    });
+
+    request.on('data', (chunk: Buffer) => {
+      received += chunk.length;
+      if (received > MAX_REQUEST_BYTES) {
+        response.writeHead(413, { 'content-type': 'application/xml; charset=utf-8' });
+        response.end(errorResponse(config, 'INVALID_REQUEST', 'request body is too large'));
+        request.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+
     request.on('end', () => {
+      if (response.writableEnded) return; // already answered 413
       const body = Buffer.concat(chunks).toString('utf8');
 
       if (throttleRemaining > 0) {

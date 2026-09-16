@@ -74,3 +74,15 @@ export const REQUEST_ID_MAX_LENGTH = 30;
 
 /** Characters NAV allows in a `requestId`. */
 export const REQUEST_ID_PATTERN = /^[+a-zA-Z0-9_]{1,30}$/;
+
+/**
+ * Largest response body, and largest decompression output, accepted from a NAV
+ * endpoint.
+ *
+ * Both exist for the same reason: a response is attacker-controlled the moment
+ * the endpoint is not the one you meant to talk to, and a gzipped payload of a
+ * few hundred kilobytes expands to hundreds of megabytes. 64 MiB is far above
+ * any real NAV batch, invoice or declaration extract.
+ */
+export const MAX_RESPONSE_BYTES = 64 * 1024 * 1024;
+export const MAX_DECOMPRESSED_BYTES = 64 * 1024 * 1024;

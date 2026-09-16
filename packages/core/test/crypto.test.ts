@@ -124,3 +124,35 @@ describe('requestId', () => {
     expect(() => assertRequestId('')).toThrowError(/Invalid requestId/);
   });
 });
+
+describe('createRequestId character distribution', () => {
+  it('draws uniformly from the alphabet rather than by modulo', () => {
+    // `byte % 62` over 256 values makes the first eight letters ~27% more
+    // likely than the rest, which shrinks the space a requestId — required to
+    // be unique per taxpayer, forever — actually spreads over. Rejection
+    // sampling keeps it flat.
+    const counts = new Map<string, number>();
+    const draws = 40_000;
+    for (let i = 0; i < draws; i += 1) {
+      // The trailing 8 characters are the random ones.
+      for (const char of createRequestId('ON').slice(-8)) {
+        counts.set(char, (counts.get(char) ?? 0) + 1);
+      }
+    }
+
+    const frequencies = [...counts.values()];
+    const expected = (draws * 8) / 62;
+    // A biased generator puts 'A'..'H' about 27% above the rest; a uniform one
+    // stays within sampling noise, comfortably inside 10%.
+    for (const frequency of frequencies) {
+      expect(Math.abs(frequency - expected) / expected).toBeLessThan(0.1);
+    }
+    expect(counts.size).toBe(62);
+  });
+
+  it('still produces an id NAV accepts', () => {
+    for (let i = 0; i < 200; i += 1) {
+      expect(() => assertRequestId(createRequestId())).not.toThrow();
+    }
+  });
+});

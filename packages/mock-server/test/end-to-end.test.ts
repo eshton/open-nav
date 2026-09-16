@@ -409,3 +409,44 @@ describe('protocol handling', () => {
     expect(await response.text()).toContain('INVALID_REQUEST');
   });
 });
+
+describe('mock server request handling', () => {
+  it('rejects an oversized body instead of buffering it, and survives an aborted request', async () => {
+    const mock = await startMockServer({
+      credentials: {
+        login: 'mocklogin123',
+        password: 'mock-password',
+        signKey: 'mock-sign-key-0123456789',
+        exchangeKey: '0123456789abcdef',
+        taxNumber: '99999999',
+      },
+    });
+
+    try {
+      // `open-nav-mock` is a long-running process, so an unbounded read is a
+      // way to exhaust its memory, and an unhandled stream `error` takes the
+      // whole server down with an uncaught exception.
+      const oversized = await fetch(`${mock.url}/tokenExchange`, {
+        method: 'POST',
+        body: 'x'.repeat(33 * 1024 * 1024),
+        headers: { 'content-type': 'application/xml' },
+      });
+      expect(oversized.status).toBe(413);
+
+      // Abort mid-flight, then check the server is still answering.
+      const controller = new AbortController();
+      const aborted = fetch(`${mock.url}/tokenExchange`, {
+        method: 'POST',
+        body: 'y'.repeat(4 * 1024 * 1024),
+        signal: controller.signal,
+      }).catch(() => undefined);
+      controller.abort();
+      await aborted;
+
+      const after = await fetch(`${mock.url}/tokenExchange`, { method: 'GET' });
+      expect(after.status).toBe(405);
+    } finally {
+      await mock.close();
+    }
+  });
+});
