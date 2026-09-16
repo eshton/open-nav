@@ -1,4 +1,4 @@
-import { NavValidationError } from '../errors.js';
+import { NavValidationError, quoteValue } from '../errors.js';
 
 /**
  * How to resolve a value exactly halfway between two representable ones.
@@ -9,6 +9,24 @@ import { NavValidationError } from '../errors.js';
 export type RoundingMode = 'half-up' | 'half-even' | 'down' | 'up';
 
 const DECIMAL_PATTERN = /^([+-]?)(\d+)(?:\.(\d*))?$/;
+
+/**
+ * Longest decimal text {@link Decimal.from} will parse.
+ *
+ * BigInt arithmetic is superlinear in the digit count, and the digit count here
+ * comes off the wire: a response element of a million digits costs ~130ms to
+ * parse and ~310ms more to compare against a schema facet, and a body can carry
+ * many of them. The schema's own `totalDigits` would have rejected such a value,
+ * but only after the arithmetic that checking it requires had already run — so
+ * the length is checked first, where it is still cheap.
+ *
+ * NAV's widest facet is `QuantityType` at 22 significant digits, so this leaves
+ * roughly forty times the headroom any real amount needs; a value past it is
+ * malformed, not merely large. Callers doing their own arithmetic can still
+ * build any magnitude they like through `Decimal.from(bigint)`, which does no
+ * parsing.
+ */
+export const MAX_DECIMAL_LENGTH = 1024;
 
 /**
  * An exact decimal, held as a scaled integer.
@@ -57,7 +75,16 @@ export class Decimal {
   }
 
   private static parse(text: string): Decimal {
-    const match = DECIMAL_PATTERN.exec(text.trim());
+    const trimmed = text.trim();
+    // Before the regex and the BigInt: both are superlinear in the length, and
+    // this is the one place untrusted decimal text enters the type.
+    if (trimmed.length > MAX_DECIMAL_LENGTH) {
+      throw invalid(
+        trimmed,
+        `is ${trimmed.length} characters; at most ${MAX_DECIMAL_LENGTH} are accepted`,
+      );
+    }
+    const match = DECIMAL_PATTERN.exec(trimmed);
     if (!match) throw invalid(text, 'is not a decimal number');
     const [, sign, whole, fraction = ''] = match;
     const units = BigInt(`${whole}${fraction}`) * (sign === '-' ? -1n : 1n);
@@ -215,6 +242,6 @@ function divideRounded(numerator: bigint, denominator: bigint, mode: RoundingMod
 
 function invalid(value: string, message: string): NavValidationError {
   return new NavValidationError('Invalid decimal', [
-    { path: '', code: 'INVALID_DECIMAL', message: `${JSON.stringify(value)} ${message}` },
+    { path: '', code: 'INVALID_DECIMAL', message: `${quoteValue(value)} ${message}` },
   ]);
 }

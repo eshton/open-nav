@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Decimal, sum } from '../src/money/decimal.js';
+import { Decimal, MAX_DECIMAL_LENGTH, sum } from '../src/money/decimal.js';
 import { NavValidationError } from '../src/errors.js';
 
 describe('Decimal', () => {
@@ -123,5 +123,49 @@ describe('Decimal', () => {
     it('serialises as a string in JSON, so it survives a round trip', () => {
       expect(JSON.stringify({ amount: Decimal.from('1.50') })).toBe('{"amount":"1.50"}');
     });
+  });
+});
+
+describe('Decimal input length', () => {
+  it('refuses a decimal too long to be a real amount, before doing the arithmetic', () => {
+    // BigInt work is superlinear in the digit count and the digits come off the
+    // wire: a million-digit element costs ~130ms to parse and ~310ms more to
+    // check against a schema facet, and one response body can carry many. The
+    // `totalDigits` facet would have rejected it too, but only after paying for
+    // exactly the arithmetic the check is meant to avoid.
+    const huge = '9'.repeat(1_000_000);
+
+    const started = performance.now();
+    expect(() => Decimal.from(huge)).toThrow(NavValidationError);
+    expect(performance.now() - started).toBeLessThan(50);
+
+    try {
+      Decimal.from(huge);
+      expect.unreachable();
+    } catch (error) {
+      const issue = (error as NavValidationError).issues[0]!;
+      expect(issue.code).toBe('INVALID_DECIMAL');
+      expect(issue.message).toContain('1000000 characters');
+      // The offending value is abbreviated, not quoted whole.
+      expect(issue.message.length).toBeLessThan(300);
+    }
+  });
+
+  it('still accepts every width NAV can ask for', () => {
+    // MonetaryType allows 18 significant digits, QuantityType 22 with 10
+    // decimal places. All well inside the limit.
+    expect(Decimal.from('123456789123456789').toString()).toBe('123456789123456789');
+    expect(Decimal.from('1234567890123456.12').toString()).toBe('1234567890123456.12');
+    expect(Decimal.from('123456789012.3456789012').toString()).toBe('123456789012.3456789012');
+    expect(Decimal.from(`-${'9'.repeat(22)}`).totalDigits()).toBe(22);
+
+    // And the limit itself is not off by one.
+    expect(Decimal.from('1'.repeat(MAX_DECIMAL_LENGTH)).totalDigits()).toBe(MAX_DECIMAL_LENGTH);
+    expect(() => Decimal.from('1'.repeat(MAX_DECIMAL_LENGTH + 1))).toThrow(NavValidationError);
+  });
+
+  it('leaves a bigint caller alone, which does no parsing', () => {
+    const enormous = BigInt('9'.repeat(5000));
+    expect(Decimal.from(enormous).totalDigits()).toBe(5000);
   });
 });

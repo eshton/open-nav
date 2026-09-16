@@ -29,6 +29,25 @@ export interface ValidationIssue {
   code?: string;
 }
 
+/**
+ * Quote a value for an error message, abbreviating one too long to print.
+ *
+ * Findings quote the value that caused them, and that value comes off the wire:
+ * quoting it whole means a response full of long junk is copied into the issue
+ * list, joined again into the thrown error's message, and from there into logs
+ * and CLI output. The head of the value is what identifies the problem; the
+ * rest only has to be counted.
+ */
+export function quoteValue(value: unknown, maxLength = 120): string {
+  const text = JSON.stringify(value) ?? String(value);
+  if (text.length <= maxLength) return text;
+  // The count is the value's own length, not the quoted form's: a string
+  // reported as 200002 characters because JSON.stringify added two quotes
+  // disagrees with every other length this library prints for it.
+  const length = typeof value === 'string' ? value.length : text.length;
+  return `${text.slice(0, maxLength)}… (${length} characters)`;
+}
+
 function formatIssues(issues: ValidationIssue[]): string {
   return issues.map((issue) => `${issue.path || '<root>'} ${issue.message}`).join('; ');
 }

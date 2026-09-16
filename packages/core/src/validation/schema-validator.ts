@@ -1,3 +1,4 @@
+import { quoteValue } from '../errors.js';
 import { Decimal } from '../money/decimal.js';
 import type { PrimitiveKind } from '../xml/descriptor.js';
 import type { IssueCollector } from './issue.js';
@@ -253,7 +254,7 @@ function checkPrimitive(
       try {
         amount = Decimal.from(value);
       } catch {
-        collector.error('SCHEMA_VIOLATION', path, `${JSON.stringify(value)} is not a decimal`);
+        collector.error('SCHEMA_VIOLATION', path, `${quoteValue(value)} is not a decimal`);
         return;
       }
       if (descriptor?.fractionDigits !== undefined && amount.scale > descriptor.fractionDigits) {
@@ -284,7 +285,7 @@ function checkPrimitive(
         collector.error(
           'SCHEMA_VIOLATION',
           path,
-          `${JSON.stringify(value)} is not one of ${descriptor.enumValues.join(', ')}`,
+          `${quoteValue(value)} is not one of ${descriptor.enumValues.join(', ')}`,
         );
       }
       if (descriptor.length !== undefined && value.length !== descriptor.length) {
@@ -312,7 +313,7 @@ function checkPrimitive(
         collector.error(
           'SCHEMA_VIOLATION',
           path,
-          `${JSON.stringify(value)} does not match ${descriptor.pattern}`,
+          `${quoteValue(value)} does not match ${descriptor.pattern}`,
         );
       }
       checkBounds(value, descriptor, path, collector);

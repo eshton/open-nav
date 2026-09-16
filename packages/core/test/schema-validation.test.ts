@@ -246,3 +246,40 @@ describe('validateInvoice layering', () => {
     );
   });
 });
+
+describe('finding messages quote bounded values', () => {
+  it('abbreviates an oversized value instead of copying it into the report', () => {
+    // Findings quote the value that caused them, and a response body full of
+    // long junk was copied into the issue list, joined again into the thrown
+    // error's message, and carried from there into logs and CLI output. The
+    // head identifies the problem; the rest only has to be counted.
+    const junk = 'A'.repeat(200_000);
+    const document = invoice();
+    const line = document.invoiceMain.invoice!.invoiceLines!.line[0]!;
+    line.lineAmountsNormal!.lineNetAmountData.lineNetAmount = junk;
+    line.unitOfMeasure = junk as never;
+
+    const report = validateInvoice(document, { today: '2030-01-01' });
+    expect(report.valid).toBe(false);
+
+    const quoted = report.issues.filter((issue) => issue.message.includes('AAAA'));
+    expect(quoted.length).toBeGreaterThan(0);
+    for (const issue of quoted) {
+      expect(issue.message).toContain('200000 characters');
+      expect(issue.message.length).toBeLessThan(500);
+    }
+
+    // The whole report stays far smaller than the single value that produced it.
+    const total = report.issues.reduce((bytes, issue) => bytes + issue.message.length, 0);
+    expect(total).toBeLessThan(junk.length);
+  });
+
+  it('still quotes an ordinary bad value in full', () => {
+    const document = invoice();
+    document.invoiceMain.invoice!.invoiceHead.invoiceDetail.paymentMethod = 'BARTER' as never;
+    const issue = validateInvoice(document, { today: '2030-01-01' }).errors.find((entry) =>
+      entry.message.includes('is not one of'),
+    );
+    expect(issue?.message).toContain('"BARTER"');
+  });
+});

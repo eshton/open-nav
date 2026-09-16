@@ -1,5 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
-import { NavValidationError, type ValidationIssue } from '../errors.js';
+import { NavValidationError, quoteValue, type ValidationIssue } from '../errors.js';
 import type { PrimitiveKind } from './descriptor.js';
 
 /**
@@ -691,7 +691,11 @@ function readPrimitive(
     case 'boolean':
       if (raw === 'true' || raw === '1') return true;
       if (raw === 'false' || raw === '0') return false;
-      issues.push({ path, code: 'EXPECTED_BOOLEAN', message: `expected a boolean, got "${raw}"` });
+      issues.push({
+        path,
+        code: 'EXPECTED_BOOLEAN',
+        message: `expected a boolean, got ${quoteValue(raw)}`,
+      });
       return undefined;
 
     case 'integer': {
@@ -699,7 +703,7 @@ function readPrimitive(
         issues.push({
           path,
           code: 'EXPECTED_INTEGER',
-          message: `expected an integer, got "${raw}"`,
+          message: `expected an integer, got ${quoteValue(raw)}`,
         });
         return undefined;
       }
@@ -708,7 +712,7 @@ function readPrimitive(
         issues.push({
           path,
           code: 'INTEGER_OUT_OF_RANGE',
-          message: `${raw} exceeds the safe integer range`,
+          message: `${quoteValue(raw)} exceeds the safe integer range`,
         });
         return undefined;
       }
