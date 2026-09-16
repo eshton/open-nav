@@ -164,3 +164,78 @@ export async function readVatDeclaration(
   }
   return decodeDownloadPayload(download.payload);
 }
+
+export interface VatReturnSummary {
+  processingId: string;
+  schema: string;
+  taxNumber: string | null;
+  /** Declaration/statement period, `yyyy-mm-dd`. */
+  periodStart: string | null;
+  periodEnd: string | null;
+  /** `true` = traditional return (statementInfo); `false` = analytics declaration. */
+  isStatement: boolean;
+  /** Only on analytics declarations. */
+  declarationType: string | null;
+  /** BASE | SELF_CHECK | CORRECTION. */
+  method: string | null;
+  /** e.g. MONTHLY | QUARTERLY | YEARLY. */
+  frequency: string | null;
+  version: number | null;
+}
+
+/**
+ * Normalise one list item into a {@link VatReturnSummary}.
+ *
+ * A list item carries either `declarationInfo` (an analytics M2M declaration) or
+ * `statementInfo` (a traditional return / bevallás, e.g. filed via ÖNYA/ÁNYK).
+ * The two shapes name the same facts differently; this flattens both to one row.
+ */
+export function summariseDeclaration(item: AnalyticsListItemType): VatReturnSummary {
+  const declaration = item.declarationInfo;
+  const statement = item.statementInfo;
+  return {
+    processingId: item.declarationProcessingId,
+    schema: item.declarationSchema,
+    taxNumber:
+      declaration?.taxNumber ??
+      (statement?.vatIdentificationNumber != null
+        ? String(statement.vatIdentificationNumber)
+        : null),
+    periodStart: declaration?.declarationPeriodStart ?? statement?.statementPeriodStart ?? null,
+    periodEnd: declaration?.declarationPeriodEnd ?? statement?.statementPeriodEnd ?? null,
+    isStatement: !declaration && !!statement,
+    declarationType: (declaration?.declarationType as string | undefined) ?? null,
+    method:
+      ((declaration?.declarationMethod ?? statement?.statementMethod) as string | undefined) ??
+      null,
+    frequency:
+      ((declaration?.declarationFrequency ?? statement?.statementFrequency) as
+        string | undefined) ?? null,
+    version: declaration?.version ?? statement?.version ?? null,
+  };
+}
+
+/**
+ * List every VAT return filed in a taxpoint-date range, normalised.
+ *
+ * Reads BOTH the analytics declarations and the traditional statements, walking
+ * the 35-day windows, de-duplicates by processing id (a return can appear in
+ * both lists), and maps each to a {@link VatReturnSummary}.
+ */
+export async function listVatReturns(
+  client: EvatClient,
+  range: TaxpointWindow,
+): Promise<VatReturnSummary[]> {
+  const [declarations, statements] = await Promise.all([
+    queryAllDeclarations(client, range),
+    queryAllStatements(client, range),
+  ]);
+  const seen = new Set<string>();
+  const rows: VatReturnSummary[] = [];
+  for (const item of [...declarations, ...statements]) {
+    if (seen.has(item.declarationProcessingId)) continue;
+    seen.add(item.declarationProcessingId);
+    rows.push(summariseDeclaration(item));
+  }
+  return rows;
+}
