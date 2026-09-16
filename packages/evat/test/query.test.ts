@@ -7,6 +7,7 @@ import {
   queryAllStatements,
   queryAllDocuments,
   readVatDeclaration,
+  summariseDeclaration,
 } from '../src/query.js';
 import { serializeDocument } from '../src/codec.js';
 import type { EvatCredentials } from '../src/credentials.js';
@@ -187,5 +188,58 @@ describe('readVatDeclaration', () => {
 
     const client = new EvatClient({ credentials, software, transport: { fetch } });
     expect(await readVatDeclaration(client, 'PROC-1')).toBe(xml);
+  });
+});
+
+describe('summariseDeclaration', () => {
+  it('flattens an analytics declaration item', () => {
+    const row = summariseDeclaration({
+      declarationProcessingId: 'PID-1',
+      declarationSchema: 'http://schemas.nav.gov.hu/2018/xml',
+      declarationInfo: {
+        taxNumber: '12345678',
+        declarationPeriodStart: '2026-01-01',
+        declarationPeriodEnd: '2026-01-31',
+        declarationType: 'A60',
+        declarationMethod: 'BASE',
+        declarationFrequency: 'MONTHLY',
+        version: 2,
+      },
+    } as never);
+    expect(row).toMatchObject({
+      processingId: 'PID-1',
+      taxNumber: '12345678',
+      periodStart: '2026-01-01',
+      periodEnd: '2026-01-31',
+      isStatement: false,
+      declarationType: 'A60',
+      method: 'BASE',
+      frequency: 'MONTHLY',
+      version: 2,
+    });
+  });
+
+  it('flattens a traditional statement item and marks isStatement', () => {
+    const row = summariseDeclaration({
+      declarationProcessingId: 'PID-2',
+      declarationSchema: 'schema',
+      statementInfo: {
+        vatIdentificationNumber: 87654321,
+        statementPeriodStart: '2026-02-01',
+        statementPeriodEnd: '2026-02-28',
+        statementMethod: 'SELF_CHECK',
+        statementFrequency: 'QUARTERLY',
+        version: 1,
+      },
+    } as never);
+    expect(row).toMatchObject({
+      processingId: 'PID-2',
+      taxNumber: '87654321',
+      isStatement: true,
+      declarationType: null,
+      method: 'SELF_CHECK',
+      frequency: 'QUARTERLY',
+      version: 1,
+    });
   });
 });

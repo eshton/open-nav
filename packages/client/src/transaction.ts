@@ -4,6 +4,7 @@ import {
   type InvoiceStatusType,
   type ProcessingResultType,
   type QueryTransactionStatusResponse,
+  type TransactionType,
 } from '@open-nav/core';
 import type { NavClient } from './client.js';
 
@@ -143,4 +144,50 @@ function summarise(
 function describeStatuses(results: ProcessingResultType[]): string {
   if (results.length === 0) return 'no per-invoice results yet';
   return results.map((result) => `#${result.index} ${result.invoiceStatus}`).join(', ');
+}
+
+export interface ListTransactionsOptions {
+  /** Inclusive start of the local-day range, `yyyy-mm-dd`. */
+  from: string;
+  /** Inclusive end of the local-day range, `yyyy-mm-dd`. */
+  to: string;
+  /** Safety cap on pages walked. Defaults to 1000. */
+  maxPages?: number;
+}
+
+/**
+ * List the transactions submitted in a date range, walking every page.
+ *
+ * `queryTransactionList` filters on `insDate`, which NAV records in Hungarian
+ * local time (CET/CEST), while the API takes UTC instants. A naïve
+ * `${day}T00:00:00Z` window is 1–2 hours off and drops edge-of-day rows, so this
+ * covers the full local day in both DST states: it starts at the earliest
+ * possible local midnight (CEST, +02:00) and ends at the latest local end-of-day
+ * (CET, +01:00), expressed as UTC `Z` instants. Results are returned newest
+ * first. Pagination is guarded against a missing `currentPage` so it can't spin.
+ */
+export async function listTransactions(
+  client: NavClient,
+  options: ListTransactionsOptions,
+): Promise<TransactionType[]> {
+  const insDate = {
+    dateTimeFrom: new Date(`${options.from}T00:00:00.000+02:00`).toISOString(),
+    dateTimeTo: new Date(`${options.to}T23:59:59.999+01:00`).toISOString(),
+  };
+  const maxPages = options.maxPages ?? 1000;
+  const out: TransactionType[] = [];
+  let page = 1;
+  for (let walked = 0; walked < maxPages; walked += 1) {
+    const result = (await client.queryTransactionList({ page, insDate })).transactionListResult;
+    for (const transaction of result.transaction ?? []) out.push(transaction);
+    if (
+      !result.availablePage ||
+      !result.currentPage ||
+      result.currentPage >= result.availablePage
+    ) {
+      break;
+    }
+    page = result.currentPage + 1;
+  }
+  return out.sort((a, b) => b.insDate.localeCompare(a.insDate));
 }

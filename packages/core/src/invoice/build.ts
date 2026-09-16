@@ -269,6 +269,62 @@ export function buildAdvanceInvoice(input: BuildInvoiceInput): InvoiceData {
   });
 }
 
+export interface BuildModifyOptions {
+  /** The invoice being modified (the chain root). */
+  originalInvoiceNumber: string;
+  /**
+   * Number of lines already present in the invoice chain — the original's lines
+   * plus every earlier modification's lines. Each corrective line takes chain
+   * position `chainLineBase + index + 1`. Defaults to 0; pass the running line
+   * count for a second (or later) modification so the references don't collide
+   * with an earlier one (NAV rejects a reused position with
+   * `INVOICE_LINE_ALREADY_EXISTS`).
+   */
+  chainLineBase?: number;
+  /** Position of this modification in the chain (1, 2, 3…). Defaults to 1. */
+  modificationIndex?: number;
+}
+
+/**
+ * Build a módosító (MODIFY) report that appends corrective lines to an issued
+ * invoice.
+ *
+ * NAV models a modification like a storno: an `invoiceReference` to the original
+ * plus a `lineModificationReference` on every line. The corrective lines take
+ * chain positions *after* everything already in the chain
+ * (`lineNumberReference = chainLineBase + index + 1`, `lineOperation: 'CREATE'`),
+ * while the document's own line numbers stay 1..N.
+ *
+ * `corrective` is an ordinary {@link BuildInvoiceInput} describing only the new
+ * lines (its `invoiceNumber` is the modifying invoice's own number). For a chain
+ * that already carries earlier modifications, pass `chainLineBase` = the running
+ * line count (original + all prior modifications) so the new references continue
+ * the chain. Validate the result with `validateInvoice({ operation: 'MODIFY' })`.
+ */
+export function buildModify(
+  corrective: BuildInvoiceInput,
+  options: BuildModifyOptions,
+): InvoiceData {
+  const doc = buildInvoice(corrective);
+  const invoice = doc.invoiceMain.invoice;
+  if (!invoice) throw new Error('buildModify needs a single-invoice document');
+
+  invoice.invoiceReference = {
+    originalInvoiceNumber: options.originalInvoiceNumber,
+    modifyWithoutMaster: false,
+    modificationIndex: options.modificationIndex ?? 1,
+  };
+
+  const base = options.chainLineBase ?? 0;
+  for (const [index, line] of (invoice.invoiceLines?.line ?? []).entries()) {
+    line.lineModificationReference = {
+      lineNumberReference: base + index + 1,
+      lineOperation: 'CREATE',
+    };
+  }
+  return doc;
+}
+
 function advanceOf(
   advance: BuildLine['advance'],
   invoiceRate: Decimal,
@@ -292,6 +348,13 @@ export interface BuildStornoOptions {
   issueDate?: string;
   /** Position of this modification in the chain. Defaults to 1. */
   modificationIndex?: number;
+  /**
+   * Number of lines already present in the invoice chain, used to offset each
+   * reversing line's `lineNumberReference` (`chainLineBase + index + 1`).
+   * Defaults to the number of lines on `original` — which is correct when
+   * `original` already carries the CURRENT chain state (see below).
+   */
+  chainLineBase?: number;
 }
 
 /**
@@ -302,11 +365,16 @@ export interface BuildStornoOptions {
  * `lineModificationReference`. Two NAV rules the shape must satisfy, both
  * learned from the live service: `lineOperation` is always `CREATE` on a
  * modifying line, and the reversing lines take chain positions *after* the
- * original (`lineNumberReference` continues past it) while the document's own
+ * whole chain (`lineNumberReference` continues past it) while the document's own
  * line numbers stay 1..N. Amounts and the summary are negated.
  *
- * Handles the common single-invoice, first-modification case; chained
- * modifications (modificationIndex > 1) are the caller's to sequence.
+ * **Stornoing a modified invoice (chained).** A storno cancels the invoice's
+ * *current* state, so `original` must be the current chain state: the original
+ * invoice with every prior modification's lines merged in. Pass the chain
+ * position too (`modificationIndex` = the next position; `chainLineBase` if the
+ * merged line count doesn't already equal the chain length). Reversing only the
+ * original's lines, or reusing a position an earlier módosító took, makes NAV
+ * reject with `INVOICE_LINE_ALREADY_EXISTS`.
  */
 export function buildStorno(original: InvoiceData, options: BuildStornoOptions): InvoiceData {
   const doc = structuredClone(original);
@@ -317,7 +385,7 @@ export function buildStorno(original: InvoiceData, options: BuildStornoOptions):
   if (!invoice) throw new Error('buildStorno needs a single-invoice document');
 
   const lines = invoice.invoiceLines?.line ?? [];
-  const originalCount = lines.length;
+  const base = options.chainLineBase ?? lines.length;
 
   invoice.invoiceReference = {
     originalInvoiceNumber: original.invoiceNumber,
@@ -326,9 +394,9 @@ export function buildStorno(original: InvoiceData, options: BuildStornoOptions):
   };
 
   lines.forEach((line, index) => {
-    // Document line numbers stay 1..N; the reference continues the chain.
+    // Document line numbers stay 1..N; the reference continues past the chain.
     line.lineModificationReference = {
-      lineNumberReference: originalCount + index + 1,
+      lineNumberReference: base + index + 1,
       lineOperation: 'CREATE',
     };
     // Reverse the quantity too, so quantity x unitPrice still equals the

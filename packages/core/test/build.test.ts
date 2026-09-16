@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildAdvanceInvoice,
   buildInvoice,
+  buildModify,
   buildStorno,
   checkInvoiceSummary,
   parseDocument,
@@ -261,5 +262,84 @@ describe('buildInvoice', () => {
     const amounts = invoice.invoiceLines!.line[0]!.lineAmountsNormal!;
     expect(amounts.lineNetAmountData.lineNetAmount).toBe('100.00');
     expect(amounts.lineNetAmountData.lineNetAmountHUF).toBe('40000.00');
+  });
+});
+
+describe('buildModify', () => {
+  const corrective: BuildInvoiceInput = {
+    ...input,
+    invoiceNumber: 'MODIFY-1',
+    lines: [{ description: 'Pótlólagos tétel', quantity: 1, unitPrice: 500, vatPercentage: 0.27 }],
+  };
+
+  it('references the original and continues line numbering past the chain', () => {
+    // First modify on a 2-line invoice: chain base 2 → new line takes position 3.
+    const doc = buildModify(corrective, {
+      originalInvoiceNumber: input.invoiceNumber,
+      chainLineBase: 2,
+      modificationIndex: 1,
+    });
+    const invoice = doc.invoiceMain.invoice!;
+
+    expect(doc.invoiceNumber).toBe('MODIFY-1');
+    expect(invoice.invoiceReference?.originalInvoiceNumber).toBe(input.invoiceNumber);
+    expect(invoice.invoiceReference?.modifyWithoutMaster).toBe(false);
+    expect(invoice.invoiceReference?.modificationIndex).toBe(1);
+
+    const line = invoice.invoiceLines!.line[0]!;
+    expect(line.lineNumber).toBe(1); // document line numbers stay 1..N
+    expect(line.lineModificationReference?.lineOperation).toBe('CREATE');
+    expect(line.lineModificationReference?.lineNumberReference).toBe(3);
+    expect(validateInvoice(doc, { operation: 'MODIFY' }).errors).toEqual([]);
+  });
+
+  it('sequences a second modification after the first', () => {
+    // Original 2 lines + first modify 1 line = base 3 → second modify takes position 4.
+    const doc = buildModify(corrective, {
+      originalInvoiceNumber: input.invoiceNumber,
+      chainLineBase: 3,
+      modificationIndex: 2,
+    });
+    const invoice = doc.invoiceMain.invoice!;
+    expect(invoice.invoiceReference?.modificationIndex).toBe(2);
+    expect(invoice.invoiceLines!.line[0]!.lineModificationReference?.lineNumberReference).toBe(4);
+  });
+
+  it('defaults chainLineBase to 0 and modificationIndex to 1', () => {
+    const doc = buildModify(corrective, { originalInvoiceNumber: input.invoiceNumber });
+    const invoice = doc.invoiceMain.invoice!;
+    expect(invoice.invoiceReference?.modificationIndex).toBe(1);
+    expect(invoice.invoiceLines!.line[0]!.lineModificationReference?.lineNumberReference).toBe(1);
+  });
+});
+
+describe('buildStorno (chained, storno-after-modify)', () => {
+  it('reverses the current chain state with references past the whole chain', () => {
+    // Current state = original 2 lines + one módosító line = 3 lines. Storno reverses
+    // all 3; references continue at chain positions 4,5,6 (base 3), index 2 in the chain.
+    const current = buildInvoice({
+      ...input,
+      lines: [
+        ...input.lines,
+        { description: 'Pótlólag', quantity: 1, unitPrice: 500, vatPercentage: 0.27 },
+      ],
+    });
+    const storno = buildStorno(current, { invoiceNumber: 'STORNO-CHAIN-1', modificationIndex: 2 });
+    const invoice = storno.invoiceMain.invoice!;
+
+    expect(invoice.invoiceReference?.modificationIndex).toBe(2);
+    const refs = invoice.invoiceLines!.line.map(
+      (l) => l.lineModificationReference?.lineNumberReference,
+    );
+    expect(refs).toEqual([4, 5, 6]); // base = current line count (3) + index + 1
+    expect(checkInvoiceSummary(invoice)).toEqual([]);
+    expect(validateInvoice(storno, { operation: 'STORNO' }).errors).toEqual([]);
+  });
+
+  it('honours an explicit chainLineBase override', () => {
+    const original = buildInvoice(input); // 2 lines
+    const storno = buildStorno(original, { invoiceNumber: 'STORNO-BASE', chainLineBase: 5 });
+    const first = storno.invoiceMain.invoice!.invoiceLines!.line[0]!;
+    expect(first.lineModificationReference?.lineNumberReference).toBe(6); // 5 + 0 + 1
   });
 });
