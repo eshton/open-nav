@@ -167,8 +167,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
       xml-crypto:
-        specifier: ^6.1.2
-        version: 6.1.2
+        specifier: ^6.3.1
+        version: 6.3.1
 
 packages:
 
@@ -3247,8 +3247,8 @@ packages:
       utf-8-validate:
         optional: true
 
-  xml-crypto@6.1.2:
-    resolution: {integrity: sha512-leBOVQdVi8FvPJrMYoum7Ici9qyxfE4kVi+AkpUoYCSXaQF4IlBm1cneTK9oAxR61LpYxTx7lNcsnBIeRpGW2w==}
+  xml-crypto@6.3.1:
+    resolution: {integrity: sha512-uSE509H/5pePltq6DEsdGRz0iJQG9Thgisq6jAxSnWaR6t4fPZWjSVRVywOoR8cEsDJtnEpepUhCbgyQr7Nwtg==}
     engines: {node: '>=16'}
 
   xml-naming@0.3.0:
@@ -6104,7 +6104,7 @@ snapshots:
 
   ws@8.21.0: {}
 
-  xml-crypto@6.1.2:
+  xml-crypto@6.3.1:
     dependencies:
       '@xmldom/is-dom-node': 1.0.1
       '@xmldom/xmldom': 0.8.15
