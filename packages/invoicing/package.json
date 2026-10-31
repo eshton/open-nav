@@ -49,6 +49,6 @@
   },
   "dependencies": {
     "@open-nav/core": "workspace:^",
-    "pdfmake": "^0.3.11"
+    "pdfmake": "^0.3.13"
   }
 }
